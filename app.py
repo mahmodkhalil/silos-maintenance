@@ -663,13 +663,18 @@ def import_receipts():
                 mat = cursor.fetchone()
                 if mat:
                     material_id = mat["id"]
-                    if code:
-                        cursor.execute("UPDATE materials SET material_code = ?, unit = ? WHERE id = ?", (code, unit, material_id))
+                    cursor.execute("""
+                        UPDATE materials 
+                        SET material_code = ?, unit = ?, current_balance = current_balance + ?
+                        WHERE id = ?
+                    """, (code, unit, quantity, material_id))
                 else:
-                    cursor.execute("INSERT INTO materials (name, unit, material_type, material_code) VALUES (?, ?, 'مستهلكة', ?)", (name, unit, code))
+                    cursor.execute("""
+                        INSERT INTO materials (name, unit, material_type, material_code, current_balance) 
+                        VALUES (?, ?, 'مستهلكة', ?, ?)
+                    """, (name, unit, code, quantity))
                     material_id = cursor.lastrowid
                 
-                cursor.execute("UPDATE materials SET current_balance = current_balance + ? WHERE id = ?", (quantity, material_id))
                 cursor.execute("""
                     INSERT INTO material_receipts (material_id, quantity, date, time, received_by, sender_name, vehicle_no, notes)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
