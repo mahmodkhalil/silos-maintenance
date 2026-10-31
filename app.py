@@ -537,6 +537,28 @@ def delete_material(material_id):
     flash("تم حذف المادة بنجاح", "danger")
     return redirect(url_for("materials"))
 
+# ============ حذف عدة مواد (جماعي) ============
+@app.route("/materials/bulk_delete", methods=["POST"])
+@login_required
+def bulk_delete_materials():
+    selected_ids = request.form.getlist("selected_materials")
+    if not selected_ids:
+        flash("لم يتم تحديد أي مادة للحذف", "danger")
+        return redirect(url_for("materials"))
+    
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        for mat_id in selected_ids:
+            cursor.execute("DELETE FROM materials WHERE id=?", (mat_id,))
+        conn.commit()
+        flash(f"تم حذف {len(selected_ids)} مادة بنجاح", "danger")
+    except Exception as e:
+        flash(f"حدث خطأ أثناء الحذف: {str(e)}", "danger")
+    finally:
+        conn.close()
+    return redirect(url_for("materials"))
+
 # ============ استيراد المواد من إكسل (ذكي) ============
 @app.route("/materials/import", methods=["POST"])
 @login_required
@@ -584,7 +606,7 @@ def import_materials():
         
     return redirect(url_for("materials"))
 
-# ============ استيراد الواردات من إكسل (متوافق مع ملفك) ============
+# ============ استيراد الواردات من إكسل ============
 @app.route("/materials/import_receipts", methods=["POST"])
 @login_required
 def import_receipts():
@@ -601,7 +623,6 @@ def import_receipts():
         unit_col = None
         code_col = None
         
-        # البحث الذكي عن الأعمدة (يدعم أسماء ملفك: المادة، الاجمالي، الواحدة، الرمز)
         for col in df.columns:
             col_str = str(col).strip()
             if 'اسم' in col_str or 'مادة' in col_str or 'Material' in col_str:
@@ -636,7 +657,7 @@ def import_receipts():
                 if mat:
                     material_id = mat["id"]
                 else:
-                    cursor.execute("INSERT INTO materials (name, unit, material_type) VALUES (?, ?, 'مستهلكة')", (name, unit))
+                    cursor.execute("INSERT INTO materials (name, unit, material_type, notes) VALUES (?, ?, 'مستهلكة', ?)", (name, unit, code))
                     material_id = cursor.lastrowid
                 
                 cursor.execute("UPDATE materials SET current_balance = current_balance + ? WHERE id = ?", (quantity, material_id))
