@@ -67,7 +67,6 @@
         </form>
     </div>
 
-    <!-- نموذج الحذف الجماعي (فقط للمواد) -->
     <form method="POST" action="{{ url_for('bulk_delete_materials') }}" onsubmit="return confirm('هل أنت متأكد من حذف كل المواد المحددة؟');">
         <div style="display: flex; justify-content: flex-end; margin-bottom: 10px;">
             <button type="submit" class="btn btn-danger">🗑️ حذف المواد المحددة</button>
@@ -222,7 +221,7 @@
         </form>
     </div>
 
-    <!-- نموذج استيراد الواردات من إكسل -->
+    <!-- نموذج استيراد الواردات من إكسل مع المعاينة -->
     <div class="file-input-wrapper">
         <form method="POST" action="{{ url_for('import_receipts') }}" enctype="multipart/form-data" id="importReceiptsForm" style="width:100%;">
             <div style="display:flex; gap:10px; align-items:center;">
@@ -273,7 +272,7 @@
                     <td>
                         <input type="text" value="{{ r.vehicle_no or '' }}" placeholder="أدخل رقم السيارة" style="width:100px; padding:4px; border:1px solid #cdd8e3; border-radius:4px;">
                     </td>
-                    <td><strong>{{ r.notes or '—' }}</strong></td>
+                    <td><strong>{{ r.material_code or '—' }}</strong></td>
                     <td>
                         <input type="text" value="" placeholder="ملاحظات" style="width:100px; padding:4px; border:1px solid #cdd8e3; border-radius:4px;">
                     </td>
