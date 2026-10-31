@@ -19,7 +19,6 @@ def init_db():
     conn = get_connection()
     cursor = conn.cursor()
 
-    # جدول الأعمال
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS works (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -29,7 +28,6 @@ def init_db():
         )
     """)
 
-    # جدول العمال
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS workers (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -37,7 +35,6 @@ def init_db():
         )
     """)
 
-    # جدول دوام العمال
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS worker_attendance (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -50,7 +47,6 @@ def init_db():
         )
     """)
 
-    # جدول المواد (مع عمود الملاحظات)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS materials (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -60,7 +56,6 @@ def init_db():
         )
     """)
 
-    # جدول الاستلام
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS material_receipts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -70,7 +65,6 @@ def init_db():
         )
     """)
 
-    # جدول الصرف
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS material_issues (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -81,7 +75,6 @@ def init_db():
         )
     """)
 
-    # جدول العهدة
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS tools_ledger (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -90,7 +83,6 @@ def init_db():
         )
     """)
 
-    # جدول الطلبات
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS material_requests (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -99,7 +91,6 @@ def init_db():
         )
     """)
 
-    # جدول إعدادات المشروع
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS project_settings (
             id INTEGER PRIMARY KEY,
@@ -111,7 +102,6 @@ def init_db():
         )
     """)
 
-    # السجل اليومي وربط العمال
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS daily_log (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -131,343 +121,8 @@ def init_db():
     conn.commit()
     conn.close()
 
-# إنشاء قاعدة البيانات عند التشغيل (حتى مع gunicorn)
+# إنشاء قاعدة البيانات عند التشغيل
 init_db()
-
-# ============ تسجيل الدخول ============
-def login_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        if not session.get("logged_in"):
-            return redirect(url_for("login"))
-        return f(*args, **kwargs)
-    return decorated
-
-@app.route("/login", methods=["GET", "POST"])
-def login():
-    if request.method == "POST":
-        username = request.form.get("username")
-        password = request.form.get("password")
-        if password == "admin":
-            session["logged_in"] = True
-            session["username"] = username
-            return redirect(url_for("index"))
-        flash("كلمة المرور خاطئة", "danger")
-    return render_template("login.html")
-
-@app.route("/logout")
-def logout():
-    session.clear()
-    return redirect(url_for("login"))
-
-# ============ الصفحة الرئيسية ============
-@app.route("/")
-@login_required
-def index():
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT COUNT(*) as total FROM works")
-    total_works = cursor.fetchone()["total"]
-    cursor.execute("SELECT COUNT(*) as done FROM works WHERE status='منجز'")
-    done_works = cursor.fetchone()["done"]
-    cursor.execute("SELECT COUNT(*) as active FROM works WHERE status='جاري'")
-    active_works = cursor.fetchone()["active"]
-    cursor.execute("SELECT COUNT(*) as workers FROM workers WHERE active=1")
-    total_workers = cursor.fetchone()["workers"]
-    cursor.execute("SELECT AVG(progress) as avg_progress FROM works")
-    avg_progress = cursor.fetchone()["avg_progress"] or 0
-    
-    cursor.execute("SELECT * FROM project_settings WHERE id=1")
-    project_settings = cursor.fetchone()
-    
-    conn.close()
-    return render_template("index.html", 
-        total_works=total_works, done_works=done_works, active_works=active_works, 
-        total_workers=total_workers, avg_progress=round(avg_progress, 1),
-        project_settings=project_settings)
-
-# ============ إعدادات المشروع ============
-@app.route("/settings", methods=["GET", "POST"])
-@login_required
-def settings():
-    conn = get_connection()
-    cursor = conn.cursor()
-    
-    if request.method == "POST":
-        project_name = request.form.get("project_name")
-        location = request.form.get("location")
-        coordinates = request.form.get("coordinates")
-        scope = request.form.get("scope")
-        manager = request.form.get("manager")
-        
-        cursor.execute("""
-            INSERT OR REPLACE INTO project_settings (id, project_name, location, coordinates, scope, manager)
-            VALUES (1, ?, ?, ?, ?, ?)
-        """, (project_name, location, coordinates, scope, manager))
-        conn.commit()
-        conn.close()
-        flash("تم تحديث إعدادات المشروع بنجاح", "success")
-        return redirect(url_for("settings"))
-    
-    cursor.execute("SELECT * FROM project_settings WHERE id = 1")
-    settings_data = cursor.fetchone()
-    conn.close()
-    return render_template("settings.html", settings=settings_data)
-
-@app.route("/export/settings")
-@login_required
-def export_settings():
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM project_settings WHERE id=1")
-    rows = cursor.fetchall()
-    conn.close()
-    data = [{"اسم المشروع": r["project_name"], "الموقع": r["location"], "الإحداثيات": r["coordinates"], "نطاق العمل": r["scope"], "مدير التنفيذ": r["manager"]} for r in rows]
-    df = pd.DataFrame(data)
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='إعدادات المشروع')
-    output.seek(0)
-    return send_file(output, download_name="إعدادات_المشروع.xlsx", as_attachment=True)
-
-# ============ فهرس الأعمال ============
-@app.route("/works")
-@login_required
-def works():
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM works ORDER BY id")
-    works_list = cursor.fetchall()
-    cursor.execute("SELECT ww.*, w.name as worker_name, w.role as worker_role FROM work_workers ww JOIN workers w ON ww.worker_id = w.id ORDER BY ww.assigned_date DESC")
-    all_assignments = cursor.fetchall()
-    workers_by_work = {}
-    for a in all_assignments:
-        wid = a["work_id"]
-        if wid not in workers_by_work: workers_by_work[wid] = []
-        workers_by_work[wid].append(dict(a))
-    cursor.execute("SELECT * FROM daily_log ORDER BY date DESC")
-    logs = cursor.fetchall()
-    logs_by_work = {}
-    for l in logs:
-        wid = l["work_id"]
-        if wid not in logs_by_work: logs_by_work[wid] = []
-        logs_by_work[wid].append(dict(l))
-    conn.close()
-    return render_template("works.html", works=works_list, workers_by_work=workers_by_work, logs_by_work=logs_by_work)
-
-@app.route("/works/add", methods=["POST"])
-@login_required
-def add_work():
-    name, phase = request.form.get("name"), request.form.get("phase")
-    start_date, end_date = request.form.get("start_date"), request.form.get("end_date")
-    responsible, status = request.form.get("responsible"), request.form.get("status", "لم يبدأ")
-    duration = 0
-    if start_date and end_date:
-        d1 = datetime.strptime(start_date, "%Y-%m-%d")
-        d2 = datetime.strptime(end_date, "%Y-%m-%d")
-        duration = (d2 - d1).days
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO works (name, phase, start_date, end_date, duration, responsible, status) VALUES (?, ?, ?, ?, ?, ?, ?)", (name, phase, start_date, end_date, duration, responsible, status))
-    conn.commit()
-    conn.close()
-    flash("تمت إضافة العمل بنجاح", "success")
-    return redirect(url_for("works"))
-
-@app.route("/works/edit/<int:work_id>", methods=["POST"])
-@login_required
-def edit_work(work_id):
-    name, phase = request.form.get("name"), request.form.get("phase")
-    start_date, end_date = request.form.get("start_date"), request.form.get("end_date")
-    responsible, status = request.form.get("responsible"), request.form.get("status")
-    duration = 0
-    if start_date and end_date:
-        d1 = datetime.strptime(start_date, "%Y-%m-%d")
-        d2 = datetime.strptime(end_date, "%Y-%m-%d")
-        duration = (d2 - d1).days
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("UPDATE works SET name=?, phase=?, start_date=?, end_date=?, duration=?, responsible=?, status=? WHERE id=?", (name, phase, start_date, end_date, duration, responsible, status, work_id))
-    conn.commit()
-    conn.close()
-    flash("تم تعديل العمل بنجاح", "success")
-    return redirect(url_for("works"))
-
-@app.route("/works/delete/<int:work_id>", methods=["POST"])
-@login_required
-def delete_work(work_id):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM works WHERE id=?", (work_id,))
-    conn.commit()
-    conn.close()
-    flash("تم حذف العمل بنجاح", "danger")
-    return redirect(url_for("works"))
-
-@app.route("/works/update_progress/<int:work_id>", methods=["POST"])
-@login_required
-def update_progress(work_id):
-    progress = int(request.form.get("progress", 0))
-    status = "منجز" if progress >= 100 else ("جاري" if progress > 0 else "لم يبدأ")
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("UPDATE works SET progress=?, status=? WHERE id=?", (progress, status, work_id))
-    conn.commit()
-    conn.close()
-    flash("تم تحديث نسبة الإنجاز", "success")
-    return redirect(url_for("works"))
-
-@app.route("/export/works")
-@login_required
-def export_works():
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, name, phase, responsible, start_date, end_date, duration, status, progress FROM works ORDER BY id")
-    rows = cursor.fetchall()
-    conn.close()
-    data = [{"الرقم": r["id"], "اسم العمل": r["name"], "المرحلة": r["phase"], "المسؤول": r["responsible"], "تاريخ البداية": r["start_date"], "تاريخ النهاية": r["end_date"], "المدة (يوم)": r["duration"], "الحالة": r["status"], "نسبة الإنجاز %": r["progress"]} for r in rows]
-    df = pd.DataFrame(data)
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='الأعمال')
-    output.seek(0)
-    return send_file(output, download_name="فهرس_الأعمال.xlsx", as_attachment=True)
-
-# ============ العمال ============
-@app.route("/workers")
-@login_required
-def workers():
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM workers ORDER BY id")
-    workers_list = cursor.fetchall()
-    
-    cursor.execute("""
-        SELECT wa.*, w.name as worker_name 
-        FROM worker_attendance wa 
-        JOIN workers w ON wa.worker_id = w.id 
-        ORDER BY wa.date DESC
-    """)
-    all_attendance = cursor.fetchall()
-    
-    attendance_by_worker = {}
-    for a in all_attendance:
-        wid = a["worker_id"]
-        if wid not in attendance_by_worker:
-            attendance_by_worker[wid] = []
-        attendance_by_worker[wid].append(dict(a))
-        
-    conn.close()
-    return render_template("workers.html", workers=workers_list, attendance_by_worker=attendance_by_worker)
-
-@app.route("/workers/add", methods=["POST"])
-@login_required
-def add_worker():
-    name, role = request.form.get("name"), request.form.get("role")
-    phone, daily_wage = request.form.get("phone"), request.form.get("daily_wage") or 0
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO workers (name, role, phone, daily_wage) VALUES (?, ?, ?, ?)", (name, role, phone, daily_wage))
-    conn.commit()
-    conn.close()
-    flash("تمت إضافة العامل", "success")
-    return redirect(url_for("workers"))
-
-@app.route("/workers/edit/<int:worker_id>", methods=["POST"])
-@login_required
-def edit_worker(worker_id):
-    name, role = request.form.get("name"), request.form.get("role")
-    phone, daily_wage = request.form.get("phone"), request.form.get("daily_wage") or 0
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("UPDATE workers SET name=?, role=?, phone=?, daily_wage=? WHERE id=?", (name, role, phone, daily_wage, worker_id))
-    conn.commit()
-    conn.close()
-    flash("تم تعديل بيانات العامل بنجاح", "success")
-    return redirect(url_for("workers"))
-
-@app.route("/workers/delete/<int:worker_id>", methods=["POST"])
-@login_required
-def delete_worker(worker_id):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM workers WHERE id=?", (worker_id,))
-    conn.commit()
-    conn.close()
-    flash("تم حذف العامل بنجاح", "danger")
-    return redirect(url_for("workers"))
-
-# ============ سجل دوام وإضافي العمال ============
-@app.route("/workers/attendance", methods=["GET", "POST"])
-@login_required
-def worker_attendance():
-    conn = get_connection()
-    cursor = conn.cursor()
-    
-    if request.method == "POST":
-        worker_id = request.form.get("worker_id")
-        date = request.form.get("date")
-        status = request.form.get("status")
-        overtime_hours = float(request.form.get("overtime_hours") or 0)
-        notes = request.form.get("notes")
-        
-        cursor.execute("""
-            INSERT INTO worker_attendance (worker_id, date, status, overtime_hours, notes)
-            VALUES (?, ?, ?, ?, ?)
-        """, (worker_id, date, status, overtime_hours, notes))
-        conn.commit()
-        flash("تم تسجيل الدوام بنجاح", "success")
-        return redirect(url_for("worker_attendance"))
-    
-    cursor.execute("""
-        SELECT wa.*, w.name as worker_name, w.role as worker_role 
-        FROM worker_attendance wa 
-        JOIN workers w ON wa.worker_id = w.id 
-        ORDER BY wa.date DESC
-    """)
-    attendance_logs = cursor.fetchall()
-    
-    cursor.execute("SELECT * FROM workers WHERE active=1 ORDER BY name")
-    workers_list = cursor.fetchall()
-    conn.close()
-    return render_template("worker_attendance.html", logs=attendance_logs, workers=workers_list)
-
-@app.route("/export/attendance")
-@login_required
-def export_attendance():
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT wa.date, w.name as worker_name, w.role, wa.status, wa.overtime_hours, wa.notes 
-        FROM worker_attendance wa 
-        JOIN workers w ON wa.worker_id = w.id 
-        ORDER BY wa.date DESC
-    """)
-    rows = cursor.fetchall()
-    conn.close()
-    data = [{"التاريخ": r["date"], "اسم العامل": r["worker_name"], "المهنة": r["role"], "الحالة": r["status"], "ساعات الإضافي": r["overtime_hours"], "ملاحظات": r["notes"]} for r in rows]
-    df = pd.DataFrame(data)
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='سجل الدوام')
-    output.seek(0)
-    return send_file(output, download_name="سجل_الدوام_والإضافي.xlsx", as_attachment=True)
-
-@app.route("/export/workers")
-@login_required
-def export_workers():
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, name, role, phone, daily_wage, active FROM workers ORDER BY id")
-    rows = cursor.fetchall()
-    conn.close()
-    data = [{"الرقم": r["id"], "الاسم": r["name"], "المهنة": r["role"], "الهاتف": r["phone"], "الأجر اليومي": r["daily_wage"], "الحالة": "نشط" if r["active"] == 1 else "غير نشط"} for r in rows]
-    df = pd.DataFrame(data)
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='العمال')
-    output.seek(0)
-    return send_file(output, download_name="كشف_العمال.xlsx", as_attachment=True)
 
 # ============ تسجيل الدخول ============
 def login_required(f):
