@@ -50,13 +50,14 @@ def init_db():
         )
     """)
 
-    # جدول المواد (مع عمود الملاحظات)
+    # جدول المواد (مع material_code)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS materials (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL, unit TEXT, current_balance REAL DEFAULT 0,
             material_type TEXT DEFAULT 'مستهلكة',
-            notes TEXT
+            notes TEXT,
+            material_code TEXT
         )
     """)
 
@@ -496,9 +497,10 @@ def add_material():
     name, unit = request.form.get("name"), request.form.get("unit")
     material_type = request.form.get("material_type", "مستهلكة")
     notes = request.form.get("notes")
+    material_code = request.form.get("material_code")
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO materials (name, unit, material_type, notes) VALUES (?, ?, ?, ?)", (name, unit, material_type, notes))
+    cursor.execute("INSERT INTO materials (name, unit, material_type, notes, material_code) VALUES (?, ?, ?, ?, ?)", (name, unit, material_type, notes, material_code))
     conn.commit()
     conn.close()
     flash("تمت إضافة المادة إلى الدليل", "success")
@@ -513,14 +515,15 @@ def edit_material(material_id):
     material_type = request.form.get("material_type")
     current_balance = float(request.form.get("current_balance") or 0)
     notes = request.form.get("notes")
+    material_code = request.form.get("material_code")
     
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
         UPDATE materials 
-        SET name=?, unit=?, material_type=?, current_balance=?, notes=?
+        SET name=?, unit=?, material_type=?, current_balance=?, notes=?, material_code=?
         WHERE id=?
-    """, (name, unit, material_type, current_balance, notes, material_id))
+    """, (name, unit, material_type, current_balance, notes, material_code, material_id))
     conn.commit()
     conn.close()
     flash("تم تعديل بيانات المادة بنجاح", "success")
@@ -573,6 +576,7 @@ def import_materials():
         
         name_col = None
         unit_col = None
+        code_col = None
         
         for col in df.columns:
             col_str = str(col).strip()
@@ -580,6 +584,8 @@ def import_materials():
                 name_col = col
             if 'وحدة' in col_str or 'Unit' in col_str:
                 unit_col = col
+            if 'رمز' in col_str or 'Code' in col_str:
+                code_col = col
                 
         if not name_col:
             name_col = df.columns[0]
@@ -593,9 +599,10 @@ def import_materials():
         for index, row in df.iterrows():
             name = row[name_col]
             unit = row[unit_col] if unit_col else ''
+            code = str(row[code_col]).strip() if code_col and pd.notna(row[code_col]) else ''
             
             if pd.notna(name) and str(name).strip() != '':
-                cursor.execute("INSERT INTO materials (name, unit, material_type) VALUES (?, ?, 'مستهلكة')", (str(name).strip(), str(unit).strip() if pd.notna(unit) else ''))
+                cursor.execute("INSERT INTO materials (name, unit, material_type, material_code) VALUES (?, ?, 'مستهلكة', ?)", (str(name).strip(), str(unit).strip() if pd.notna(unit) else '', code))
                 count += 1
                 
         conn.commit()
@@ -656,8 +663,10 @@ def import_receipts():
                 mat = cursor.fetchone()
                 if mat:
                     material_id = mat["id"]
+                    if code:
+                        cursor.execute("UPDATE materials SET material_code = ?, unit = ? WHERE id = ?", (code, unit, material_id))
                 else:
-                    cursor.execute("INSERT INTO materials (name, unit, material_type, notes) VALUES (?, ?, 'مستهلكة', ?)", (name, unit, code))
+                    cursor.execute("INSERT INTO materials (name, unit, material_type, material_code) VALUES (?, ?, 'مستهلكة', ?)", (name, unit, code))
                     material_id = cursor.lastrowid
                 
                 cursor.execute("UPDATE materials SET current_balance = current_balance + ? WHERE id = ?", (quantity, material_id))
