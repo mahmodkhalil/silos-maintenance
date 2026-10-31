@@ -12,17 +12,10 @@
     .tab-content { display: none; animation: fadeIn 0.3s; }
     .tab-content.active { display: block; }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    
-    .file-input-wrapper {
-        display: flex;
-        gap: 10px;
-        align-items: center;
-        margin-bottom: 15px;
-        background: #f8fafc;
-        padding: 15px;
-        border-radius: 8px;
-        border: 1px dashed #cdd8e3;
-    }
+    .file-input-wrapper { background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px dashed #cdd8e3; margin-bottom: 15px; }
+    .preview-table { width: 100%; font-size: 12px; margin-top: 10px; border-collapse: collapse; display: none; }
+    .preview-table th, .preview-table td { padding: 6px; border: 1px solid #e0e8f0; text-align: right; }
+    .preview-table th { background: #1e3a5f; color: white; }
 </style>
 
 <div class="page-title">المستودع الفرعي للمشروع</div>
@@ -70,99 +63,109 @@
         </form>
     </div>
 
-    <div class="sub-title" style="font-size:15px; margin-top:20px;">🔹 المواد المستهلكة</div>
-    {% set consumables = [] %}
-    {% set equipment = [] %}
-    {% for m in materials %}
-        {% if m.material_type == 'مستهلكة' %}
-            {% set _ = consumables.append(m) %}
-        {% elif m.material_type == 'عهدة' %}
-            {% set _ = equipment.append(m) %}
+    <form method="POST" action="{{ url_for('bulk_delete_materials') }}" onsubmit="return confirm('هل أنت متأكد من حذف كل المواد المحددة؟');">
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 10px;">
+            <button type="submit" class="btn btn-danger">🗑️ حذف المواد المحددة</button>
+        </div>
+        
+        <div class="sub-title" style="font-size:15px; margin-top:20px;">🔹 المواد المستهلكة</div>
+        {% set consumables = [] %}
+        {% set equipment = [] %}
+        {% for m in materials %}
+            {% if m.material_type == 'مستهلكة' %}
+                {% set _ = consumables.append(m) %}
+            {% elif m.material_type == 'عهدة' %}
+                {% set _ = equipment.append(m) %}
+            {% endif %}
+        {% endfor %}
+
+        {% if consumables|length > 0 %}
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:30px;"><input type="checkbox" onclick="toggleAll(this, 'consumable_cb')"></th>
+                    <th>#</th>
+                    <th>اسم المادة</th>
+                    <th>الرمز</th>
+                    <th>الوحدة</th>
+                    <th>الرصيد</th>
+                    <th>ملاحظات</th>
+                    <th>الإجراءات</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in consumables %}
+                <tr>
+                    <td><input type="checkbox" name="selected_materials" value="{{ m.id }}" class="consumable_cb"></td>
+                    <td>{{ m.id }}</td>
+                    <td><strong>{{ m.name }}</strong></td>
+                    <td>{{ m.notes or '—' }}</td>
+                    <td>{{ m.unit or '—' }}</td>
+                    <td>
+                        <strong style="color: {% if m.current_balance > 0 %}#27ae60{% else %}#c0392b{% endif %}; font-size: 16px;">
+                            {{ m.current_balance }}
+                        </strong>
+                    </td>
+                    <td>{{ m.notes or '—' }}</td>
+                    <td style="white-space: nowrap;">
+                        <button type="button" class="btn btn-gold btn-sm" 
+                            onclick="openEditMaterialModal('{{ m.id }}', '{{ m.name }}', '{{ m.unit }}', '{{ m.material_type }}', '{{ m.current_balance }}', '{{ m.notes }}')">
+                            ✏️
+                        </button>
+                        <button type="button" class="btn btn-danger btn-sm" onclick="deleteSingle({{ m.id }})">🗑️</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="text-align:center; color:#6b7c93; padding:10px;">لا يوجد مواد مستهلكة مسجلة.</p>
         {% endif %}
-    {% endfor %}
 
-    {% if consumables|length > 0 %}
-    <table>
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>اسم المادة</th>
-                <th>الوحدة</th>
-                <th>الرصيد الحالي</th>
-                <th>ملاحظات</th>
-                <th>الإجراءات</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for m in consumables %}
-            <tr>
-                <td>{{ m.id }}</td>
-                <td><strong>{{ m.name }}</strong></td>
-                <td>{{ m.unit or '—' }}</td>
-                <td>
-                    <strong style="color: {% if m.current_balance > 0 %}#27ae60{% else %}#c0392b{% endif %}; font-size: 16px;">
-                        {{ m.current_balance }}
-                    </strong>
-                </td>
-                <td>{{ m.notes or '—' }}</td>
-                <td style="white-space: nowrap;">
-                    <button type="button" class="btn btn-gold btn-sm" 
-                        onclick="openEditMaterialModal('{{ m.id }}', '{{ m.name }}', '{{ m.unit }}', '{{ m.material_type }}', '{{ m.current_balance }}', '{{ m.notes }}')">
-                        ✏️
-                    </button>
-                    <form method="POST" action="{{ url_for('delete_material', material_id=m.id) }}" style="display:inline;" onsubmit="return confirm('هل أنت متأكد من حذف هذه المادة؟');">
-                        <button type="submit" class="btn btn-danger btn-sm">🗑️</button>
-                    </form>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p style="text-align:center; color:#6b7c93; padding:10px;">لا يوجد مواد مستهلكة مسجلة.</p>
-    {% endif %}
-
-    <div class="sub-title" style="font-size:15px; margin-top:30px;">🔸 العهد والمعدات (غير المستهلكة)</div>
-    {% if equipment|length > 0 %}
-    <table>
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>اسم العهدة/المعدة</th>
-                <th>الوحدة</th>
-                <th>الكمية الموجودة</th>
-                <th>ملاحظات</th>
-                <th>الإجراءات</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for m in equipment %}
-            <tr>
-                <td>{{ m.id }}</td>
-                <td><strong>{{ m.name }}</strong></td>
-                <td>{{ m.unit or '—' }}</td>
-                <td>
-                    <strong style="color: #1e3a5f; font-size: 16px;">
-                        {{ m.current_balance }}
-                    </strong>
-                </td>
-                <td>{{ m.notes or '—' }}</td>
-                <td style="white-space: nowrap;">
-                    <button type="button" class="btn btn-gold btn-sm" 
-                        onclick="openEditMaterialModal('{{ m.id }}', '{{ m.name }}', '{{ m.unit }}', '{{ m.material_type }}', '{{ m.current_balance }}', '{{ m.notes }}')">
-                        ✏️
-                    </button>
-                    <form method="POST" action="{{ url_for('delete_material', material_id=m.id) }}" style="display:inline;" onsubmit="return confirm('هل أنت متأكد من حذف هذه المادة؟');">
-                        <button type="submit" class="btn btn-danger btn-sm">🗑️</button>
-                    </form>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p style="text-align:center; color:#6b7c93; padding:10px;">لا يوجد عهد أو معدات مسجلة.</p>
-    {% endif %}
+        <div class="sub-title" style="font-size:15px; margin-top:30px;">🔸 العهد والمعدات (غير المستهلكة)</div>
+        {% if equipment|length > 0 %}
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:30px;"><input type="checkbox" onclick="toggleAll(this, 'equipment_cb')"></th>
+                    <th>#</th>
+                    <th>اسم العهدة/المعدة</th>
+                    <th>الرمز</th>
+                    <th>الوحدة</th>
+                    <th>الكمية الموجودة</th>
+                    <th>ملاحظات</th>
+                    <th>الإجراءات</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in equipment %}
+                <tr>
+                    <td><input type="checkbox" name="selected_materials" value="{{ m.id }}" class="equipment_cb"></td>
+                    <td>{{ m.id }}</td>
+                    <td><strong>{{ m.name }}</strong></td>
+                    <td>{{ m.notes or '—' }}</td>
+                    <td>{{ m.unit or '—' }}</td>
+                    <td>
+                        <strong style="color: #1e3a5f; font-size: 16px;">
+                            {{ m.current_balance }}
+                        </strong>
+                    </td>
+                    <td>{{ m.notes or '—' }}</td>
+                    <td style="white-space: nowrap;">
+                        <button type="button" class="btn btn-gold btn-sm" 
+                            onclick="openEditMaterialModal('{{ m.id }}', '{{ m.name }}', '{{ m.unit }}', '{{ m.material_type }}', '{{ m.current_balance }}', '{{ m.notes }}')">
+                            ✏️
+                        </button>
+                        <button type="button" class="btn btn-danger btn-sm" onclick="deleteSingle({{ m.id }})">🗑️</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="text-align:center; color:#6b7c93; padding:10px;">لا يوجد عهد أو معدات مسجلة.</p>
+        {% endif %}
+    </form>
     
     <div class="file-input-wrapper" style="margin-top:30px;">
         <form method="POST" action="{{ url_for('import_materials') }}" enctype="multipart/form-data" style="display:flex; gap:10px; align-items:center; width:100%;">
@@ -214,14 +217,24 @@
         </form>
     </div>
 
-    <!-- نموذج استيراد الواردات من إكسل (ملفك) -->
+    <!-- نموذج استيراد الواردات من إكسل مع المعاينة -->
     <div class="file-input-wrapper">
-        <form method="POST" action="{{ url_for('import_receipts') }}" enctype="multipart/form-data" style="display:flex; gap:10px; align-items:center; width:100%;">
-            <div style="flex-grow:1;">
-                <label style="font-weight:bold; font-size:14px; display:block; margin-bottom:5px;">📥 استيراد واردات من ملف إكسل (يدعم أعمدة: المادة، الاجمالي، الواحدة، الرمز)</label>
-                <input type="file" name="file" accept=".xlsx, .xls" required style="width:100%; padding:8px; border:1px solid #cdd8e3; border-radius:6px;">
+        <form method="POST" action="{{ url_for('import_receipts') }}" enctype="multipart/form-data" id="importReceiptsForm" style="width:100%;">
+            <div style="display:flex; gap:10px; align-items:center;">
+                <div style="flex-grow:1;">
+                    <label style="font-weight:bold; font-size:14px; display:block; margin-bottom:5px;">📥 استيراد واردات من ملف إكسل (يدعم أعمدة: المادة، الاجمالي، الواحدة، الرمز)</label>
+                    <input type="file" name="file" accept=".xlsx, .xls" required id="excelFileInput" onchange="previewExcel(this)" style="width:100%; padding:8px; border:1px solid #cdd8e3; border-radius:6px;">
+                </div>
+                <button type="submit" class="btn btn-primary" style="margin-top:22px;">رفع الملف</button>
             </div>
-            <button type="submit" class="btn btn-primary" style="margin-top:22px;">رفع الملف</button>
+            <!-- معاينة الملف -->
+            <div id="previewContainer">
+                <table class="preview-table" id="previewTable">
+                    <thead><tr id="previewHeader"></tr></thead>
+                    <tbody id="previewBody"></tbody>
+                </table>
+                <p id="previewInfo" style="font-size:12px; color:#6b7c93; margin-top:5px;"></p>
+            </div>
         </form>
     </div>
 
@@ -511,6 +524,7 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
     function openTab(tabId, btn) {
         var contents = document.getElementsByClassName("tab-content");
@@ -536,6 +550,68 @@
     }
     function closeEditMaterialModal() {
         document.getElementById('editMaterialModal').style.display = 'none';
+    }
+
+    function toggleAll(source, className) {
+        checkboxes = document.getElementsByClassName(className);
+        for(var i=0, n=checkboxes.length;i<n;i++) {
+            checkboxes[i].checked = source.checked;
+        }
+    }
+
+    function deleteSingle(id) {
+        if(confirm('هل أنت متأكد من حذف هذه المادة؟')) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/materials/delete/' + id;
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+
+    function previewExcel(input) {
+        const previewTable = document.getElementById('previewTable');
+        const previewHeader = document.getElementById('previewHeader');
+        const previewBody = document.getElementById('previewBody');
+        const previewInfo = document.getElementById('previewInfo');
+
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const json = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
+                
+                if (json.length > 0) {
+                    previewTable.style.display = 'table';
+                    previewHeader.innerHTML = '';
+                    previewBody.innerHTML = '';
+                    
+                    json[0].forEach(header => {
+                        const th = document.createElement('th');
+                        th.textContent = header;
+                        previewHeader.appendChild(th);
+                    });
+                    
+                    const rowsToShow = Math.min(5, json.length - 1);
+                    for (let i = 1; i <= rowsToShow; i++) {
+                        const tr = document.createElement('tr');
+                        json[i].forEach(cell => {
+                            const td = document.createElement('td');
+                            td.textContent = cell;
+                            tr.appendChild(td);
+                        });
+                        previewBody.appendChild(tr);
+                    }
+                    previewInfo.textContent = "معاينة أول " + rowsToShow + " صفوف من الملف. إجمالي الصفوف: " + (json.length - 1);
+                } else {
+                    previewTable.style.display = 'none';
+                    previewInfo.textContent = "الملف فارغ.";
+                }
+            };
+            reader.readAsArrayBuffer(input.files[0]);
+        }
     }
 </script>
 {% endblock %}
