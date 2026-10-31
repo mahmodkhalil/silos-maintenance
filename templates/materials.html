@@ -43,6 +43,7 @@
         <button class="btn btn-gold" onclick="document.getElementById('addMaterialForm').style.display='block'">+ إضافة مادة للدليل</button>
     </div>
 
+    <!-- فورم إضافة مادة للدليل -->
     <div id="addMaterialForm" class="form-box" style="display:none; background:#f8fafc;">
         <form method="POST" action="{{ url_for('add_material') }}">
             <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:15px;">
@@ -54,12 +55,22 @@
                     <label>وحدة القياس</label>
                     <input type="text" name="unit" placeholder="طن، كيس، متر مكعب">
                 </div>
+                <div class="form-group">
+                    <label>النوع *</label>
+                    <select name="material_type" required>
+                        <option value="مستهلكة">مادة مستهلكة (بتنقص من الرصيد)</option>
+                        <option value="عهدة">عهدة / معدة (بتضل بالمشروع)</option>
+                    </select>
+                </div>
             </div>
             <button type="submit" class="btn btn-primary">حفظ المادة</button>
         </form>
     </div>
 
-    {% if materials and materials|length > 0 %}
+    <!-- جدول المواد المستهلكة -->
+    <div class="sub-title" style="font-size:15px; margin-top:20px;">🔹 المواد المستهلكة</div>
+    {% set consumables = materials | selectattr("material_type", "equalto", "مستهلكة") | list %}
+    {% if consumables|length > 0 %}
     <table>
         <thead>
             <tr>
@@ -70,7 +81,7 @@
             </tr>
         </thead>
         <tbody>
-            {% for m in materials %}
+            {% for m in consumables %}
             <tr>
                 <td>{{ m.id }}</td>
                 <td><strong>{{ m.name }}</strong></td>
@@ -85,14 +96,46 @@
         </tbody>
     </table>
     {% else %}
-    <p style="text-align:center; color:#6b7c93; padding:20px;">لا يوجد مواد مسجلة في الدليل. أضف مادة جديدة أو استوردها من إكسل.</p>
+    <p style="text-align:center; color:#6b7c93; padding:10px;">لا يوجد مواد مستهلكة مسجلة.</p>
+    {% endif %}
+
+    <!-- جدول العهد والمعدات -->
+    <div class="sub-title" style="font-size:15px; margin-top:30px;">🔸 العهد والمعدات (غير المستهلكة)</div>
+    {% set equipment = materials | selectattr("material_type", "equalto", "عهدة") | list %}
+    {% if equipment|length > 0 %}
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>اسم العهدة/المعدة</th>
+                <th>الوحدة</th>
+                <th>الكمية الموجودة</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for m in equipment %}
+            <tr>
+                <td>{{ m.id }}</td>
+                <td><strong>{{ m.name }}</strong></td>
+                <td>{{ m.unit or '—' }}</td>
+                <td>
+                    <strong style="color: #1e3a5f; font-size: 16px;">
+                        {{ m.current_balance }}
+                    </strong>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="text-align:center; color:#6b7c93; padding:10px;">لا يوجد عهد أو معدات مسجلة.</p>
     {% endif %}
     
     <!-- نموذج استيراد المواد من إكسل -->
-    <div class="file-input-wrapper">
+    <div class="file-input-wrapper" style="margin-top:30px;">
         <form method="POST" action="{{ url_for('import_materials') }}" enctype="multipart/form-data" style="display:flex; gap:10px; align-items:center; width:100%;">
             <div style="flex-grow:1;">
-                <label style="font-weight:bold; font-size:14px; display:block; margin-bottom:5px;">📥 استيراد مواد من ملف إكسل (سيتم البحث عن اسم المادة والوحدة تلقائياً)</label>
+                <label style="font-weight:bold; font-size:14px; display:block; margin-bottom:5px;">📥 استيراد مواد من ملف إكسل (سيتم إضافتها كمواد مستهلكة افتراضياً)</label>
                 <input type="file" name="file" accept=".xlsx, .xls" required style="width:100%; padding:8px; border:1px solid #cdd8e3; border-radius:6px;">
             </div>
             <button type="submit" class="btn btn-primary" style="margin-top:22px;">رفع الملف</button>
@@ -110,7 +153,7 @@
                     <label>المادة</label>
                     <select name="material_id" required>
                         {% for m in materials %}
-                            <option value="{{ m.id }}">{{ m.name }} ({{ m.unit }})</option>
+                            <option value="{{ m.id }}">{{ m.name }} ({{ m.material_type }})</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -119,11 +162,11 @@
                     <input type="number" name="quantity" step="0.01" required>
                 </div>
                 <div class="form-group">
-                    <label>المستلم (اللي استلم بالمشروع)</label>
+                    <label>المستلم</label>
                     <input type="text" name="received_by" value="{{ session.username }}" required>
                 </div>
                 <div class="form-group">
-                    <label>المرسل (المورد / المستودع الرئيسي)</label>
+                    <label>المرسل (المورد / المستودع)</label>
                     <input type="text" name="sender_name" placeholder="مثال: مستودع قمح الرئيسي">
                 </div>
                 <div class="form-group">
@@ -188,7 +231,7 @@
                     <select name="material_id" required>
                         {% for m in materials %}
                             {% if m.current_balance > 0 %}
-                                <option value="{{ m.id }}">{{ m.name }} (المتوفر: {{ m.current_balance }})</option>
+                                <option value="{{ m.id }}">{{ m.name }} ({{ m.material_type }} - المتوفر: {{ m.current_balance }})</option>
                             {% endif %}
                         {% endfor %}
                     </select>
