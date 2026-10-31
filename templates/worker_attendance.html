@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}سجل الدوام والإضافي — إدارة مشروع تأهيل صومعة{% endblock %}
+
+{% block content %}
+
+<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;">
+    <div class="page-title" style="margin-bottom: 0;">سجل دوام وإضافي العمال</div>
+    <a href="{{ url_for('export_attendance') }}" class="btn btn-primary" style="background: #27ae60; color: white;">📥 تصدير إلى إكسل</a>
+</div>
+
+<!-- ===== نموذج إضافة سجل دوام ===== -->
+<div class="form-box">
+    <div class="sub-title" style="font-size:16px; margin-bottom:12px;">➕ تسجيل دوام جديد</div>
+    <form method="POST">
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:15px;">
+            <div class="form-group">
+                <label>العامل *</label>
+                <select name="worker_id" required>
+                    <option value="">اختر العامل</option>
+                    {% for w in workers %}
+                        <option value="{{ w.id }}">{{ w.name }} ({{ w.role }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>التاريخ *</label>
+                <input type="date" name="date" required>
+            </div>
+            <div class="form-group">
+                <label>الحالة *</label>
+                <select name="status" required>
+                    <option value="حاضر">حاضر</option>
+                    <option value="غائب">غائب</option>
+                    <option value="إجازة">إجازة</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>ساعات الإضافي</label>
+                <input type="number" name="overtime_hours" step="0.5" value="0" placeholder="0">
+            </div>
+            <div class="form-group">
+                <label>ملاحظات</label>
+                <input type="text" name="notes" placeholder="سبب الغياب أو الإجازة...">
+            </div>
+        </div>
+        <button type="submit" class="btn btn-gold">💾 حفظ السجل</button>
+    </form>
+</div>
+
+<!-- ===== جدول السجل ===== -->
+<div class="form-box">
+    <div class="sub-title" style="font-size:16px; margin-bottom:12px;">📋 سجل الدوام والإضافي</div>
+
+    {% if logs and logs|length > 0 %}
+    <table>
+        <thead>
+            <tr>
+                <th>التاريخ</th>
+                <th>اسم العامل</th>
+                <th>المهنة</th>
+                <th>الحالة</th>
+                <th>ساعات الإضافي</th>
+                <th>ملاحظات</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for l in logs %}
+            <tr>
+                <td><strong>{{ l.date }}</strong></td>
+                <td>{{ l.worker_name }}</td>
+                <td>{{ l.worker_role or '—' }}</td>
+                <td>
+                    {% if l.status == 'حاضر' %}
+                        <span class="badge badge-done">حاضر</span>
+                    {% elif l.status == 'إجازة' %}
+                        <span class="badge badge-progress">إجازة</span>
+                    {% else %}
+                        <span class="badge badge-pending">غائب</span>
+                    {% endif %}
+                </td>
+                <td style="color: #e67e22; font-weight: bold;">{{ l.overtime_hours }} ساعة</td>
+                <td>{{ l.notes or '—' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="font-size:14px; color:#6b7c93; text-align:center; padding:20px;">
+        لا يوجد سجلات دوام بعد. أضف أول سجل من النموذج أعلاه.
+    </p>
+    {% endif %}
+</div>
+
+{% endblock %}
