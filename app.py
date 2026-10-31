@@ -19,7 +19,6 @@ def init_db():
     conn = get_connection()
     cursor = conn.cursor()
 
-    # جدول الأعمال
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS works (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -29,7 +28,6 @@ def init_db():
         )
     """)
 
-    # جدول العمال
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS workers (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -37,31 +35,22 @@ def init_db():
         )
     """)
 
-    # جدول دوام العمال
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS worker_attendance (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            worker_id INTEGER,
-            date TEXT,
-            status TEXT,
-            overtime_hours REAL DEFAULT 0,
-            notes TEXT,
+            worker_id INTEGER, date TEXT, status TEXT, overtime_hours REAL DEFAULT 0, notes TEXT,
             FOREIGN KEY (worker_id) REFERENCES workers(id)
         )
     """)
 
-    # جدول المواد (مع material_code)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS materials (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL, unit TEXT, current_balance REAL DEFAULT 0,
-            material_type TEXT DEFAULT 'مستهلكة',
-            notes TEXT,
-            material_code TEXT
+            material_type TEXT DEFAULT 'مستهلكة', notes TEXT, material_code TEXT
         )
     """)
 
-    # جدول الاستلام
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS material_receipts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -71,7 +60,6 @@ def init_db():
         )
     """)
 
-    # جدول الصرف
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS material_issues (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -82,7 +70,6 @@ def init_db():
         )
     """)
 
-    # جدول العهدة
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS tools_ledger (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -91,7 +78,6 @@ def init_db():
         )
     """)
 
-    # جدول الطلبات
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS material_requests (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -100,19 +86,12 @@ def init_db():
         )
     """)
 
-    # جدول إعدادات المشروع
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS project_settings (
-            id INTEGER PRIMARY KEY,
-            project_name TEXT,
-            location TEXT,
-            coordinates TEXT,
-            scope TEXT,
-            manager TEXT
+            id INTEGER PRIMARY KEY, project_name TEXT, location TEXT, coordinates TEXT, scope TEXT, manager TEXT
         )
     """)
 
-    # السجل اليومي وربط العمال
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS daily_log (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -124,15 +103,13 @@ def init_db():
         CREATE TABLE IF NOT EXISTS work_workers (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             work_id INTEGER, worker_id INTEGER, assigned_date TEXT,
-            FOREIGN KEY (work_id) REFERENCES works(id),
-            FOREIGN KEY (worker_id) REFERENCES workers(id)
+            FOREIGN KEY (work_id) REFERENCES works(id), FOREIGN KEY (worker_id) REFERENCES workers(id)
         )
     """)
 
     conn.commit()
     conn.close()
 
-# إنشاء قاعدة البيانات عند التشغيل (حتى مع gunicorn)
 init_db()
 
 # ============ تسجيل الدخول ============
