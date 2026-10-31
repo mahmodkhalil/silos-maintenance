@@ -19,6 +19,7 @@ def init_db():
     conn = get_connection()
     cursor = conn.cursor()
 
+    # جدول الأعمال
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS works (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -28,6 +29,7 @@ def init_db():
         )
     """)
 
+    # جدول العمال
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS workers (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -35,6 +37,7 @@ def init_db():
         )
     """)
 
+    # جدول دوام العمال
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS worker_attendance (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -57,6 +60,7 @@ def init_db():
         )
     """)
 
+    # جدول الاستلام
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS material_receipts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -66,6 +70,7 @@ def init_db():
         )
     """)
 
+    # جدول الصرف
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS material_issues (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -76,6 +81,7 @@ def init_db():
         )
     """)
 
+    # جدول العهدة
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS tools_ledger (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -84,6 +90,7 @@ def init_db():
         )
     """)
 
+    # جدول الطلبات
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS material_requests (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -92,6 +99,7 @@ def init_db():
         )
     """)
 
+    # جدول إعدادات المشروع
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS project_settings (
             id INTEGER PRIMARY KEY,
@@ -103,6 +111,7 @@ def init_db():
         )
     """)
 
+    # السجل اليومي وربط العمال
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS daily_log (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -121,6 +130,9 @@ def init_db():
 
     conn.commit()
     conn.close()
+
+# إنشاء قاعدة البيانات عند التشغيل (حتى مع gunicorn)
+init_db()
 
 # ============ تسجيل الدخول ============
 def login_required(f):
