@@ -50,11 +50,12 @@ def init_db():
         )
     """)
 
-    # جدول المواد
+    # جدول المواد (تم إضافة عمود النوع)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS materials (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL, unit TEXT, current_balance REAL DEFAULT 0
+            name TEXT NOT NULL, unit TEXT, current_balance REAL DEFAULT 0,
+            material_type TEXT DEFAULT 'مستهلكة' 
         )
     """)
 
@@ -470,7 +471,7 @@ def export_workers():
 def materials():
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM materials ORDER BY id")
+    cursor.execute("SELECT * FROM materials ORDER BY material_type, id")
     materials_list = cursor.fetchall()
     cursor.execute("SELECT * FROM works ORDER BY name")
     works_list = cursor.fetchall()
@@ -489,9 +490,10 @@ def materials():
 @login_required
 def add_material():
     name, unit = request.form.get("name"), request.form.get("unit")
+    material_type = request.form.get("material_type", "مستهلكة")
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO materials (name, unit) VALUES (?, ?)", (name, unit))
+    cursor.execute("INSERT INTO materials (name, unit, material_type) VALUES (?, ?, ?)", (name, unit, material_type))
     conn.commit()
     conn.close()
     flash("تمت إضافة المادة إلى الدليل", "success")
@@ -509,7 +511,6 @@ def import_materials():
     try:
         df = pd.read_excel(file)
         
-        # محاولة ذكية لاكتشاف الأعمدة
         name_col = None
         unit_col = None
         
@@ -520,7 +521,6 @@ def import_materials():
             if 'وحدة' in col_str or 'Unit' in col_str:
                 unit_col = col
                 
-        # إذا ما لقى أعمدة واضحة، بياخد أول عمودين
         if not name_col:
             name_col = df.columns[0]
         if not unit_col and len(df.columns) > 1:
@@ -535,7 +535,7 @@ def import_materials():
             unit = row[unit_col] if unit_col else ''
             
             if pd.notna(name) and str(name).strip() != '':
-                cursor.execute("INSERT INTO materials (name, unit) VALUES (?, ?)", (str(name).strip(), str(unit).strip() if pd.notna(unit) else ''))
+                cursor.execute("INSERT INTO materials (name, unit, material_type) VALUES (?, ?, 'مستهلكة')", (str(name).strip(), str(unit).strip() if pd.notna(unit) else ''))
                 count += 1
                 
         conn.commit()
