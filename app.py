@@ -4,7 +4,6 @@ from datetime import datetime
 from functools import wraps
 import pandas as pd
 import io
-import os
 
 app = Flask(__name__)
 app.secret_key = "silos_maintenance_secret_key_2026"
@@ -51,12 +50,13 @@ def init_db():
         )
     """)
 
-    # جدول المواد
+    # جدول المواد (مع عمود الملاحظات)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS materials (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL, unit TEXT, current_balance REAL DEFAULT 0,
-            material_type TEXT DEFAULT 'مستهلكة' 
+            material_type TEXT DEFAULT 'مستهلكة',
+            notes TEXT
         )
     """)
 
@@ -130,9 +130,6 @@ def init_db():
 
     conn.commit()
     conn.close()
-
-# إنشاء قاعدة البيانات عند تشغيل التطبيق
-init_db()
 
 # ============ تسجيل الدخول ============
 def login_required(f):
@@ -495,14 +492,49 @@ def materials():
 def add_material():
     name, unit = request.form.get("name"), request.form.get("unit")
     material_type = request.form.get("material_type", "مستهلكة")
+    notes = request.form.get("notes")
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO materials (name, unit, material_type) VALUES (?, ?, ?)", (name, unit, material_type))
+    cursor.execute("INSERT INTO materials (name, unit, material_type, notes) VALUES (?, ?, ?, ?)", (name, unit, material_type, notes))
     conn.commit()
     conn.close()
     flash("تمت إضافة المادة إلى الدليل", "success")
     return redirect(url_for("materials"))
 
+# ============ تعديل وحذف المواد ============
+@app.route("/materials/edit/<int:material_id>", methods=["POST"])
+@login_required
+def edit_material(material_id):
+    name = request.form.get("name")
+    unit = request.form.get("unit")
+    material_type = request.form.get("material_type")
+    current_balance = float(request.form.get("current_balance") or 0)
+    notes = request.form.get("notes")
+    
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE materials 
+        SET name=?, unit=?, material_type=?, current_balance=?, notes=?
+        WHERE id=?
+    """, (name, unit, material_type, current_balance, notes, material_id))
+    conn.commit()
+    conn.close()
+    flash("تم تعديل بيانات المادة بنجاح", "success")
+    return redirect(url_for("materials"))
+
+@app.route("/materials/delete/<int:material_id>", methods=["POST"])
+@login_required
+def delete_material(material_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM materials WHERE id=?", (material_id,))
+    conn.commit()
+    conn.close()
+    flash("تم حذف المادة بنجاح", "danger")
+    return redirect(url_for("materials"))
+
+# ============ استيراد المواد من إكسل (ذكي) ============
 @app.route("/materials/import", methods=["POST"])
 @login_required
 def import_materials():
