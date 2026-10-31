@@ -458,9 +458,9 @@ def materials():
     cursor.execute("SELECT * FROM works ORDER BY name")
     works_list = cursor.fetchall()
     
-    # جلب الواردات مع material_code
+    # جلب الواردات مع material_code و unit
     cursor.execute("""
-        SELECT mr.*, m.name as material_name, m.material_code as material_code 
+        SELECT mr.*, m.name as material_name, m.material_code as material_code, m.unit as unit 
         FROM material_receipts mr 
         JOIN materials m ON mr.material_id = m.id 
         ORDER BY mr.date DESC, mr.time DESC
@@ -692,6 +692,50 @@ def update_receipt_details(receipt_id):
     conn.close()
     flash("تم تحديث بيانات الوارد بنجاح", "success")
     return redirect(url_for("materials"))
+
+# ============ حذف سجل وارد ============
+@app.route("/materials/delete_receipt/<int:receipt_id>", methods=["POST"])
+@login_required
+def delete_receipt(receipt_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM material_receipts WHERE id=?", (receipt_id,))
+    conn.commit()
+    conn.close()
+    flash("تم حذف سجل الوارد", "danger")
+    return redirect(url_for("materials"))
+
+# ============ تقارير الواردات (بحث حسب الشهر أو المادة) ============
+@app.route("/materials/receipts_report", methods=["GET", "POST"])
+@login_required
+def receipts_report():
+    conn = get_connection()
+    cursor = conn.cursor()
+    query = """
+        SELECT mr.*, m.name as material_name, m.material_code as material_code, m.unit as unit
+        FROM material_receipts mr 
+        JOIN materials m ON mr.material_id = m.id
+        WHERE 1=1
+    """
+    params = []
+    
+    if request.method == "POST":
+        month = request.form.get("month")
+        material_name = request.form.get("material_name")
+        
+        if month:
+            query += " AND strftime('%Y-%m', mr.date) = ?"
+            params.append(month)
+        if material_name:
+            query += " AND m.name LIKE ?"
+            params.append(f"%{material_name}%")
+    
+    query += " ORDER BY mr.date DESC, mr.time DESC"
+    cursor.execute(query, params)
+    receipts = cursor.fetchall()
+    conn.close()
+    
+    return render_template("receipts_report.html", receipts=receipts)
 
 @app.route("/materials/receive", methods=["POST"])
 @login_required
