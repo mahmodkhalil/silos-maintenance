@@ -652,10 +652,11 @@ def import_receipts():
                     """, (name, unit, code, quantity))
                     material_id = cursor.lastrowid
                 
+                # هنا تم تعديل الكود: تركنا vehicle_no و notes فاضيين
                 cursor.execute("""
                     INSERT INTO material_receipts (material_id, quantity, date, time, received_by, sender_name, vehicle_no, notes)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """, (material_id, quantity, date, time, received_by, 'مستودع رئيسي', code, code))
+                """, (material_id, quantity, date, time, received_by, 'مستودع رئيسي', '', ''))
                 count += 1
                 
         conn.commit()
