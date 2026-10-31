@@ -214,11 +214,11 @@
         </form>
     </div>
 
-    <!-- نموذج استيراد الواردات من إكسل -->
+    <!-- نموذج استيراد الواردات من إكسل (ملفك) -->
     <div class="file-input-wrapper">
         <form method="POST" action="{{ url_for('import_receipts') }}" enctype="multipart/form-data" style="display:flex; gap:10px; align-items:center; width:100%;">
             <div style="flex-grow:1;">
-                <label style="font-weight:bold; font-size:14px; display:block; margin-bottom:5px;">📥 استيراد واردات من ملف إكسل (يجب أن يحتوي على: اسم المادة، الكمية)</label>
+                <label style="font-weight:bold; font-size:14px; display:block; margin-bottom:5px;">📥 استيراد واردات من ملف إكسل (يدعم أعمدة: المادة، الاجمالي، الواحدة، الرمز)</label>
                 <input type="file" name="file" accept=".xlsx, .xls" required style="width:100%; padding:8px; border:1px solid #cdd8e3; border-radius:6px;">
             </div>
             <button type="submit" class="btn btn-primary" style="margin-top:22px;">رفع الملف</button>
