@@ -61,12 +61,15 @@
                         <option value="عهدة">عهدة / معدة (بتضل بالمشروع)</option>
                     </select>
                 </div>
+                <div class="form-group">
+                    <label>ملاحظات</label>
+                    <input type="text" name="notes" placeholder="أي تفاصيل">
+                </div>
             </div>
             <button type="submit" class="btn btn-primary">حفظ المادة</button>
         </form>
     </div>
 
-    <!-- جدول المواد المستهلكة -->
     <div class="sub-title" style="font-size:15px; margin-top:20px;">🔹 المواد المستهلكة</div>
     {% set consumables = [] %}
     {% set equipment = [] %}
@@ -86,6 +89,8 @@
                 <th>اسم المادة</th>
                 <th>الوحدة</th>
                 <th>الرصيد الحالي</th>
+                <th>ملاحظات</th>
+                <th>الإجراءات</th>
             </tr>
         </thead>
         <tbody>
@@ -99,6 +104,16 @@
                         {{ m.current_balance }}
                     </strong>
                 </td>
+                <td>{{ m.notes or '—' }}</td>
+                <td style="white-space: nowrap;">
+                    <button type="button" class="btn btn-gold btn-sm" 
+                        onclick="openEditMaterialModal('{{ m.id }}', '{{ m.name }}', '{{ m.unit }}', '{{ m.material_type }}', '{{ m.current_balance }}', '{{ m.notes }}')">
+                        ✏️
+                    </button>
+                    <form method="POST" action="{{ url_for('delete_material', material_id=m.id) }}" style="display:inline;" onsubmit="return confirm('هل أنت متأكد من حذف هذه المادة؟');">
+                        <button type="submit" class="btn btn-danger btn-sm">🗑️</button>
+                    </form>
+                </td>
             </tr>
             {% endfor %}
         </tbody>
@@ -107,7 +122,6 @@
     <p style="text-align:center; color:#6b7c93; padding:10px;">لا يوجد مواد مستهلكة مسجلة.</p>
     {% endif %}
 
-    <!-- جدول العهد والمعدات -->
     <div class="sub-title" style="font-size:15px; margin-top:30px;">🔸 العهد والمعدات (غير المستهلكة)</div>
     {% if equipment|length > 0 %}
     <table>
@@ -117,6 +131,8 @@
                 <th>اسم العهدة/المعدة</th>
                 <th>الوحدة</th>
                 <th>الكمية الموجودة</th>
+                <th>ملاحظات</th>
+                <th>الإجراءات</th>
             </tr>
         </thead>
         <tbody>
@@ -130,6 +146,16 @@
                         {{ m.current_balance }}
                     </strong>
                 </td>
+                <td>{{ m.notes or '—' }}</td>
+                <td style="white-space: nowrap;">
+                    <button type="button" class="btn btn-gold btn-sm" 
+                        onclick="openEditMaterialModal('{{ m.id }}', '{{ m.name }}', '{{ m.unit }}', '{{ m.material_type }}', '{{ m.current_balance }}', '{{ m.notes }}')">
+                        ✏️
+                    </button>
+                    <form method="POST" action="{{ url_for('delete_material', material_id=m.id) }}" style="display:inline;" onsubmit="return confirm('هل أنت متأكد من حذف هذه المادة؟');">
+                        <button type="submit" class="btn btn-danger btn-sm">🗑️</button>
+                    </form>
+                </td>
             </tr>
             {% endfor %}
         </tbody>
@@ -138,7 +164,6 @@
     <p style="text-align:center; color:#6b7c93; padding:10px;">لا يوجد عهد أو معدات مسجلة.</p>
     {% endif %}
     
-    <!-- نموذج استيراد المواد من إكسل -->
     <div class="file-input-wrapper" style="margin-top:30px;">
         <form method="POST" action="{{ url_for('import_materials') }}" enctype="multipart/form-data" style="display:flex; gap:10px; align-items:center; width:100%;">
             <div style="flex-grow:1;">
@@ -453,6 +478,28 @@
 {% endblock %}
 
 {% block scripts %}
+<!-- نافذة تعديل المادة -->
+<div id="editMaterialModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+    <div class="form-box" style="width:90%; max-width:500px; background:white; margin:50px auto; position:relative;">
+        <button onclick="closeEditMaterialModal()" style="position:absolute; top:10px; left:10px; background:none; border:none; font-size:20px; cursor:pointer;">✖</button>
+        <div class="sub-title" style="font-size:18px; margin-bottom:15px;">✏️ تعديل بيانات المادة</div>
+        <form id="editMaterialForm" method="POST" action="">
+            <div class="form-group"><label>اسم المادة *</label><input type="text" name="name" id="edit_mat_name" required></div>
+            <div class="form-group"><label>الوحدة</label><input type="text" name="unit" id="edit_mat_unit"></div>
+            <div class="form-group">
+                <label>النوع</label>
+                <select name="material_type" id="edit_mat_type">
+                    <option value="مستهلكة">مستهلكة</option>
+                    <option value="عهدة">عهدة</option>
+                </select>
+            </div>
+            <div class="form-group"><label>الرصيد الحالي</label><input type="number" name="current_balance" id="edit_mat_balance" step="0.01"></div>
+            <div class="form-group"><label>ملاحظات</label><input type="text" name="notes" id="edit_mat_notes"></div>
+            <button type="submit" class="btn btn-gold" style="width:100%;">💾 حفظ التعديلات</button>
+        </form>
+    </div>
+</div>
+
 <script>
     function openTab(tabId, btn) {
         var contents = document.getElementsByClassName("tab-content");
@@ -465,6 +512,19 @@
         }
         document.getElementById(tabId).classList.add("active");
         btn.classList.add("active");
+    }
+
+    function openEditMaterialModal(id, name, unit, type, balance, notes) {
+        document.getElementById('edit_mat_name').value = name;
+        document.getElementById('edit_mat_unit').value = unit;
+        document.getElementById('edit_mat_type').value = type;
+        document.getElementById('edit_mat_balance').value = balance;
+        document.getElementById('edit_mat_notes').value = notes;
+        document.getElementById('editMaterialForm').action = "/materials/edit/" + id;
+        document.getElementById('editMaterialModal').style.display = 'flex';
+    }
+    function closeEditMaterialModal() {
+        document.getElementById('editMaterialModal').style.display = 'none';
     }
 </script>
 {% endblock %}
