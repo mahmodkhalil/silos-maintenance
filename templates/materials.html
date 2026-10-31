@@ -43,7 +43,6 @@
         <button class="btn btn-gold" onclick="document.getElementById('addMaterialForm').style.display='block'">+ إضافة مادة للدليل</button>
     </div>
 
-    <!-- فورم إضافة مادة للدليل -->
     <div id="addMaterialForm" class="form-box" style="display:none; background:#f8fafc;">
         <form method="POST" action="{{ url_for('add_material') }}">
             <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:15px;">
@@ -67,7 +66,6 @@
         </form>
     </div>
 
-    <!-- جدول المواد المستهلكة -->
     <div class="sub-title" style="font-size:15px; margin-top:20px;">🔹 المواد المستهلكة</div>
     {% set consumables = materials | selectattr("material_type", "equalto", "مستهلكة") | list %}
     {% if consumables|length > 0 %}
@@ -99,7 +97,6 @@
     <p style="text-align:center; color:#6b7c93; padding:10px;">لا يوجد مواد مستهلكة مسجلة.</p>
     {% endif %}
 
-    <!-- جدول العهد والمعدات -->
     <div class="sub-title" style="font-size:15px; margin-top:30px;">🔸 العهد والمعدات (غير المستهلكة)</div>
     {% set equipment = materials | selectattr("material_type", "equalto", "عهدة") | list %}
     {% if equipment|length > 0 %}
@@ -131,7 +128,6 @@
     <p style="text-align:center; color:#6b7c93; padding:10px;">لا يوجد عهد أو معدات مسجلة.</p>
     {% endif %}
     
-    <!-- نموذج استيراد المواد من إكسل -->
     <div class="file-input-wrapper" style="margin-top:30px;">
         <form method="POST" action="{{ url_for('import_materials') }}" enctype="multipart/form-data" style="display:flex; gap:10px; align-items:center; width:100%;">
             <div style="flex-grow:1;">
