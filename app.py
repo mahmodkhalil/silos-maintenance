@@ -497,6 +497,55 @@ def add_material():
     flash("تمت إضافة المادة إلى الدليل", "success")
     return redirect(url_for("materials"))
 
+# ============ استيراد المواد من إكسل (ذكي) ============
+@app.route("/materials/import", methods=["POST"])
+@login_required
+def import_materials():
+    file = request.files.get('file')
+    if not file or file.filename == '':
+        flash("الرجاء اختيار ملف إكسل أولاً", "danger")
+        return redirect(url_for("materials"))
+        
+    try:
+        df = pd.read_excel(file)
+        
+        # محاولة ذكية لاكتشاف الأعمدة
+        name_col = None
+        unit_col = None
+        
+        for col in df.columns:
+            col_str = str(col).strip()
+            if 'اسم' in col_str or 'مادة' in col_str or 'Material' in col_str:
+                name_col = col
+            if 'وحدة' in col_str or 'Unit' in col_str:
+                unit_col = col
+                
+        # إذا ما لقى أعمدة واضحة، بياخد أول عمودين
+        if not name_col:
+            name_col = df.columns[0]
+        if not unit_col and len(df.columns) > 1:
+            unit_col = df.columns[1]
+            
+        conn = get_connection()
+        cursor = conn.cursor()
+        
+        count = 0
+        for index, row in df.iterrows():
+            name = row[name_col]
+            unit = row[unit_col] if unit_col else ''
+            
+            if pd.notna(name) and str(name).strip() != '':
+                cursor.execute("INSERT INTO materials (name, unit) VALUES (?, ?)", (str(name).strip(), str(unit).strip() if pd.notna(unit) else ''))
+                count += 1
+                
+        conn.commit()
+        conn.close()
+        flash(f"تم استيراد {count} مادة بنجاح من ملف الإكسل", "success")
+    except Exception as e:
+        flash(f"حدث خطأ أثناء قراءة الملف: {str(e)}", "danger")
+        
+    return redirect(url_for("materials"))
+
 @app.route("/materials/receive", methods=["POST"])
 @login_required
 def receive_material():
