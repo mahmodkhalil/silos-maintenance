@@ -37,6 +37,19 @@ def init_db():
         )
     """)
 
+    # جدول دوام العمال
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS worker_attendance (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            worker_id INTEGER,
+            date TEXT,
+            status TEXT,
+            overtime_hours REAL DEFAULT 0,
+            notes TEXT,
+            FOREIGN KEY (worker_id) REFERENCES workers(id)
+        )
+    """)
+
     # جدول المواد
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS materials (
@@ -159,7 +172,6 @@ def index():
     cursor.execute("SELECT AVG(progress) as avg_progress FROM works")
     avg_progress = cursor.fetchone()["avg_progress"] or 0
     
-    # جلب إعدادات المشروع
     cursor.execute("SELECT * FROM project_settings WHERE id=1")
     project_settings = cursor.fetchone()
     
@@ -363,6 +375,62 @@ def delete_worker(worker_id):
     conn.close()
     flash("تم حذف العامل بنجاح", "danger")
     return redirect(url_for("workers"))
+
+# ============ سجل دوام وإضافي العمال ============
+@app.route("/workers/attendance", methods=["GET", "POST"])
+@login_required
+def worker_attendance():
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    if request.method == "POST":
+        worker_id = request.form.get("worker_id")
+        date = request.form.get("date")
+        status = request.form.get("status")
+        overtime_hours = float(request.form.get("overtime_hours") or 0)
+        notes = request.form.get("notes")
+        
+        cursor.execute("""
+            INSERT INTO worker_attendance (worker_id, date, status, overtime_hours, notes)
+            VALUES (?, ?, ?, ?, ?)
+        """, (worker_id, date, status, overtime_hours, notes))
+        conn.commit()
+        flash("تم تسجيل الدوام بنجاح", "success")
+        return redirect(url_for("worker_attendance"))
+    
+    cursor.execute("""
+        SELECT wa.*, w.name as worker_name, w.role as worker_role 
+        FROM worker_attendance wa 
+        JOIN workers w ON wa.worker_id = w.id 
+        ORDER BY wa.date DESC
+    """)
+    attendance_logs = cursor.fetchall()
+    
+    cursor.execute("SELECT * FROM workers WHERE active=1 ORDER BY name")
+    workers_list = cursor.fetchall()
+    conn.close()
+    return render_template("worker_attendance.html", logs=attendance_logs, workers=workers_list)
+
+@app.route("/export/attendance")
+@login_required
+def export_attendance():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT wa.date, w.name as worker_name, w.role, wa.status, wa.overtime_hours, wa.notes 
+        FROM worker_attendance wa 
+        JOIN workers w ON wa.worker_id = w.id 
+        ORDER BY wa.date DESC
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+    data = [{"التاريخ": r["date"], "اسم العامل": r["worker_name"], "المهنة": r["role"], "الحالة": r["status"], "ساعات الإضافي": r["overtime_hours"], "ملاحظات": r["notes"]} for r in rows]
+    df = pd.DataFrame(data)
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='سجل الدوام')
+    output.seek(0)
+    return send_file(output, download_name="سجل_الدوام_والإضافي.xlsx", as_attachment=True)
 
 @app.route("/export/workers")
 @login_required
