@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+
+{% block title %}فهرس الأعمال — إدارة مشروع تأهيل صومعة{% endblock %}
+
+{% block content %}
+
+<!-- ===== عنوان الصفحة وزر التصدير ===== -->
+<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;">
+    <div class="page-title" style="margin-bottom: 0;">فهرس الأعمال</div>
+    <a href="{{ url_for('export_works') }}" class="btn btn-primary" style="background: #27ae60; color: white;">📥 تصدير إلى إكسل</a>
+</div>
+
+<!-- ===== نموذج إضافة عمل جديد ===== -->
+<div class="form-box">
+    <div class="sub-title" style="font-size:16px; margin-bottom:12px;">➕ إضافة عمل جديد</div>
+    <form method="POST" action="{{ url_for('add_work') }}">
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:15px;">
+            <div class="form-group">
+                <label>اسم العمل *</label>
+                <input type="text" name="name" required placeholder="مثال: ترميم جدار الصومعة 1">
+            </div>
+            <div class="form-group">
+                <label>المرحلة *</label>
+                <select name="phase" required>
+                    <option value="">اختر المرحلة</option>
+                    <option value="أعمال مدنية">أعمال مدنية</option>
+                    <option value="أعمال معدنية">أعمال معدنية</option>
+                    <option value="كهروميكانيك">كهروميكانيك</option>
+                    <option value="عزل">عزل</option>
+                    <option value="تشغيل تجريبي">تشغيل تجريبي</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>تاريخ البداية</label>
+                <input type="date" name="start_date">
+            </div>
+            <div class="form-group">
+                <label>تاريخ النهاية</label>
+                <input type="date" name="end_date">
+            </div>
+            <div class="form-group">
+                <label>المسؤول</label>
+                <input type="text" name="responsible" placeholder="اسم المشرف المسؤول">
+            </div>
+            <div class="form-group">
+                <label>الحالة</label>
+                <select name="status">
+                    <option value="لم يبدأ">لم يبدأ</option>
+                    <option value="جاري">جاري</option>
+                    <option value="منجز">منجز</option>
+                </select>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-gold">💾 حفظ العمل</button>
+    </form>
+</div>
+
+<!-- ===== جدول فهرس الأعمال ===== -->
+<div class="form-box">
+    <div class="sub-title" style="font-size:16px; margin-bottom:12px;">📋 قائمة الأعمال</div>
+
+    {% if works and works|length > 0 %}
+    <table>
+        <thead>
+            <tr>
+                <th style="width:40px;"></th>
+                <th>#</th>
+                <th>اسم العمل</th>
+                <th>المرحلة</th>
+                <th>المسؤول</th>
+                <th>المدة (يوم)</th>
+                <th>الحالة</th>
+                <th>نسبة الإنجاز</th>
+                <th>تحديث</th>
+                <th>الإجراءات</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for work in works %}
+            <tr>
+                <td>
+                    <button class="expand-btn" onclick="toggleRow({{ work.id }})" id="btn-{{ work.id }}">▼</button>
+                </td>
+                <td>{{ work.id }}</td>
+                <td><strong>{{ work.name }}</strong></td>
+                <td>{{ work.phase }}</td>
+                <td>{{ work.responsible or '—' }}</td>
+                <td>{{ work.duration or 0 }}</td>
+                <td>
+                    {% if work.status == 'منجز' %}
+                        <span class="badge badge-done">منجز</span>
+                    {% elif work.status == 'جاري' %}
+                        <span class="badge badge-progress">جاري</span>
+                    {% else %}
+                        <span class="badge badge-pending">لم يبدأ</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: {{ work.progress }}%;"></div>
+                        <div class="progress-text">{{ work.progress }}%</div>
+                    </div>
+                </td>
+                <td>
+                    <form method="POST" action="{{ url_for('update_progress', work_id=work.id) }}" style="display:flex; gap:5px; align-items:center;">
+                        <input type="number" name="progress" min="0" max="100" value="{{ work.progress }}" style="width:60px; padding:4px; border:1px solid #cdd8e3; border-radius:4px; font-size:12px;">
+                        <button type="submit" class="btn btn-primary btn-sm">حفظ</button>
+                    </form>
+                </td>
+                <td style="white-space: nowrap;">
+                    <button type="button" class="btn btn-gold btn-sm" 
+                        onclick="openEditWorkModal('{{ work.id }}', '{{ work.name }}', '{{ work.phase }}', '{{ work.start_date }}', '{{ work.end_date }}', '{{ work.responsible }}', '{{ work.status }}')">
+                        ✏️
+                    </button>
+                    <form method="POST" action="{{ url_for('delete_work', work_id=work.id) }}" style="display:inline;" onsubmit="return confirm('هل أنت متأكد من حذف هذا العمل؟');">
+                        <button type="submit" class="btn btn-danger btn-sm">🗑️</button>
+                    </form>
+                </td>
+            </tr>
+
+            <!-- ===== الصف المنسدل ===== -->
+            <tr class="sub-row" id="row-{{ work.id }}">
+                <td colspan="10">
+                    <div class="sub-title">👷 العمال المرتبطون بهذا العمل</div>
+                    {% if workers_by_work.get(work.id) %}
+                    <table class="sub-table">
+                        <thead><tr><th>اسم العامل</th><th>الدور</th><th>تاريخ الإسناد</th></tr></thead>
+                        <tbody>
+                            {% for w in workers_by_work[work.id] %}
+                            <tr><td>{{ w.worker_name }}</td><td>{{ w.worker_role or '—' }}</td><td>{{ w.assigned_date or '—' }}</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p style="font-size:13px; color:#6b7c93; margin-bottom:12px;">لا يوجد عمال مسندون لهذا العمل حالياً.</p>
+                    {% endif %}
+
+                    <div class="sub-title">📝 السجل اليومي لهذا العمل</div>
+                    {% if logs_by_work.get(work.id) %}
+                    <table class="sub-table">
+                        <thead><tr><th>التاريخ</th><th>عدد العمال</th><th>ملاحظات</th></tr></thead>
+                        <tbody>
+                            {% for l in logs_by_work[work.id] %}
+                            <tr><td>{{ l.date }}</td><td>{{ l.workers_count }}</td><td>{{ l.notes or '—' }}</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p style="font-size:13px; color:#6b7c93;">لا يوجد سجل يومي لهذا العمل بعد.</p>
+                    {% endif %}
+
+                    <div style="margin-top:12px; font-size:13px; color:#6b7c93;">
+                        📅 من: {{ work.start_date or '—' }} &nbsp;|&nbsp; إلى: {{ work.end_date or '—' }}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="font-size:14px; color:#6b7c93; text-align:center; padding:20px;">
+        لا توجد أعمال مسجلة بعد. أضف أول عمل من النموذج أعلاه.
+    </p>
+    {% endif %}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<!-- ===== نافذة تعديل العمل (Modal) ===== -->
+<div id="editWorkModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+    <div class="form-box" style="width:90%; max-width:500px; background:white; margin:50px auto; position:relative;">
+        <button onclick="closeEditWorkModal()" style="position:absolute; top:10px; left:10px; background:none; border:none; font-size:20px; cursor:pointer;">✖</button>
+        <div class="sub-title" style="font-size:18px; margin-bottom:15px;">✏️ تعديل بيانات العمل</div>
+        <form id="editWorkForm" method="POST" action="">
+            <div class="form-group">
+                <label>اسم العمل</label>
+                <input type="text" name="name" id="edit_w_name" required>
+            </div>
+            <div class="form-group">
+                <label>المرحلة</label>
+                <select name="phase" id="edit_w_phase">
+                    <option value="أعمال مدنية">أعمال مدنية</option>
+                    <option value="أعمال معدنية">أعمال معدنية</option>
+                    <option value="كهروميكانيك">كهروميكانيك</option>
+                    <option value="عزل">عزل</option>
+                    <option value="تشغيل تجريبي">تشغيل تجريبي</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>تاريخ البداية</label>
+                <input type="date" name="start_date" id="edit_w_start">
+            </div>
+            <div class="form-group">
+                <label>تاريخ النهاية</label>
+                <input type="date" name="end_date" id="edit_w_end">
+            </div>
+            <div class="form-group">
+                <label>المسؤول</label>
+                <input type="text" name="responsible" id="edit_w_resp">
+            </div>
+            <div class="form-group">
+                <label>الحالة</label>
+                <select name="status" id="edit_w_status">
+                    <option value="لم يبدأ">لم يبدأ</option>
+                    <option value="جاري">جاري</option>
+                    <option value="منجز">منجز</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-gold" style="width:100%;">💾 حفظ التعديلات</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    // دالة فتح وإغلاق الصفوف المنسدلة
+    function toggleRow(workId) {
+        const row = document.getElementById('row-' + workId);
+        const btn = document.getElementById('btn-' + workId);
+        if (row.style.display === 'table-row') {
+            row.style.display = 'none';
+            btn.classList.remove('open');
+        } else {
+            row.style.display = 'table-row';
+            btn.classList.add('open');
+        }
+    }
+
+    // دوال نافذة التعديل
+    function openEditWorkModal(id, name, phase, start, end, resp, status) {
+        document.getElementById('edit_w_name').value = name;
+        document.getElementById('edit_w_phase').value = phase;
+        document.getElementById('edit_w_start').value = start;
+        document.getElementById('edit_w_end').value = end;
+        document.getElementById('edit_w_resp').value = resp;
+        document.getElementById('edit_w_status').value = status;
+        document.getElementById('editWorkForm').action = "/works/edit/" + id;
+        document.getElementById('editWorkModal').style.display = 'flex';
+    }
+    function closeEditWorkModal() {
+        document.getElementById('editWorkModal').style.display = 'none';
+    }
+</script>
+{% endblock %}

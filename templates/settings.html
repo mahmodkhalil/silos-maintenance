@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}إعدادات المشروع — إدارة مشروع تأهيل صومعة{% endblock %}
+
+{% block content %}
+
+<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;">
+    <div class="page-title" style="margin-bottom: 0;">إعدادات المشروع</div>
+    <a href="{{ url_for('export_settings') }}" class="btn btn-primary" style="background: #27ae60; color: white;">📥 تصدير إلى إكسل</a>
+</div>
+
+<div class="form-box">
+    <form method="POST">
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(250px,1fr)); gap:15px;">
+            <div class="form-group">
+                <label>اسم المشروع</label>
+                <input type="text" name="project_name" value="{{ settings.project_name if settings else '' }}">
+            </div>
+            <div class="form-group">
+                <label>الموقع</label>
+                <input type="text" name="location" value="{{ settings.location if settings else '' }}">
+            </div>
+            <div class="form-group">
+                <label>الإحداثيات</label>
+                <input type="text" name="coordinates" value="{{ settings.coordinates if settings else '' }}">
+            </div>
+            <div class="form-group">
+                <label>نطاق العمل</label>
+                <input type="text" name="scope" value="{{ settings.scope if settings else '' }}">
+            </div>
+            <div class="form-group">
+                <label>مدير التنفيذ</label>
+                <input type="text" name="manager" value="{{ settings.manager if settings else '' }}">
+            </div>
+        </div>
+        <button type="submit" class="btn btn-gold">💾 حفظ الإعدادات</button>
+    </form>
+</div>
+
+{% endblock %}

@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}إدارة مشروع تأهيل صومعة{% endblock %}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+        }
+
+        body {
+            background: #f0f4f8;
+            color: #1e3a5f;
+            min-height: 100vh;
+        }
+
+        /* ===== الهيدر ===== */
+        .navbar {
+            background: #1e3a5f;
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .navbar .brand {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .navbar .brand img {
+            height: 45px; 
+            width: auto;
+            background: white;
+            padding: 3px 8px;
+            border-radius: 6px;
+        }
+
+        .navbar .brand .company-name {
+            font-size: 12px;
+            color: #a0b2c6;
+            font-weight: normal;
+            display: block;
+            margin-top: 2px;
+        }
+
+        .navbar .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .navbar .nav-actions a,
+        .navbar .nav-actions button {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 14px;
+            transition: 0.2s;
+        }
+
+        .navbar .nav-actions a:hover,
+        .navbar .nav-actions button:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .role-badge {
+            background: #f0b429;
+            color: #1e3a5f;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        /* ===== القائمة ===== */
+        .menu {
+            background: #2a4d7a;
+            display: flex;
+            flex-wrap: wrap;
+            padding: 0 10px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .menu a {
+            color: #e0e8f0;
+            text-decoration: none;
+            padding: 14px 18px;
+            font-size: 14px;
+            transition: 0.2s;
+            border-bottom: 3px solid transparent;
+        }
+
+        .menu a:hover,
+        .menu a.active {
+            background: #1e3a5f;
+            color: #f0b429;
+            border-bottom: 3px solid #f0b429;
+        }
+
+        /* ===== المحتوى ===== */
+        .container {
+            max-width: 1300px;
+            margin: 25px auto;
+            padding: 0 20px;
+        }
+
+        .page-title {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #1e3a5f;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title::before {
+            content: "";
+            width: 6px;
+            height: 28px;
+            background: #f0b429;
+            border-radius: 3px;
+        }
+
+        /* ===== البطاقات ===== */
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 18px;
+            margin-bottom: 25px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+            border-right: 5px solid #1e3a5f;
+            transition: 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+        }
+
+        .card.gold { border-right-color: #f0b429; }
+        .card.green { border-right-color: #27ae60; }
+        .card.orange { border-right-color: #e67e22; }
+        .card.red { border-right-color: #c0392b; }
+
+        .card .label {
+            font-size: 13px;
+            color: #6b7c93;
+            margin-bottom: 6px;
+        }
+
+        .card .value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #1e3a5f;
+        }
+
+        /* ===== الجداول ===== */
+        table {
+            width: 100%;
+            background: white;
+            border-collapse: collapse;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+            margin-bottom: 20px;
+        }
+
+        th {
+            background: #1e3a5f;
+            color: white;
+            padding: 12px;
+            text-align: right;
+            font-size: 14px;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #eef2f7;
+            font-size: 14px;
+            color: #33475b;
+        }
+
+        tr:hover td {
+            background: #f8fafc;
+        }
+
+        /* ===== الأزرار ===== */
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            text-decoration: none;
+            display: inline-block;
+            transition: 0.2s;
+        }
+
+        .btn-primary { background: #1e3a5f; color: white; }
+        .btn-primary:hover { background: #2a4d7a; }
+        .btn-gold { background: #f0b429; color: #1e3a5f; font-weight: bold; }
+        .btn-gold:hover { background: #d9a01f; }
+        .btn-danger { background: #c0392b; color: white; }
+        .btn-danger:hover { background: #a93226; }
+        .btn-sm { padding: 5px 10px; font-size: 12px; }
+
+        /* ===== النماذج ===== */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            color: #33475b;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #cdd8e3;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: 0.2s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #f0b429;
+            box-shadow: 0 0 0 3px rgba(240,180,41,0.2);
+        }
+
+        .form-box {
+            background: white;
+            padding: 22px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+            margin-bottom: 25px;
+        }
+
+        /* ===== التنبيهات ===== */
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+
+        .alert-success { background: #d4edda; color: #155724; border-right: 5px solid #27ae60; }
+        .alert-danger { background: #f8d7da; color: #721c24; border-right: 5px solid #c0392b; }
+        .alert-info { background: #d1ecf1; color: #0c5460; border-right: 5px solid #2980b9; }
+
+        /* ===== الشارات ===== */
+        .badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            display: inline-block;
+        }
+
+        .badge-pending { background: #fce4e4; color: #c0392b; }
+        .badge-progress { background: #fff3cd; color: #856404; }
+        .badge-done { background: #d4edda; color: #155724; }
+
+        /* ===== القائمة المنسدلة (Accordion) ===== */
+        .expand-btn {
+            background: #f0b429;
+            color: #1e3a5f;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        .expand-btn:hover {
+            background: #d9a01f;
+        }
+
+        .expand-btn.open {
+            transform: rotate(180deg);
+        }
+
+        .sub-row {
+            display: none;
+        }
+
+        .sub-row td {
+            background: #f8fafc;
+            padding: 15px 20px !important;
+        }
+
+        .sub-table {
+            width: 100%;
+            margin-bottom: 12px;
+            box-shadow: none;
+            border: 1px solid #e0e8f0;
+            border-radius: 8px;
+        }
+
+        .sub-table th {
+            background: #2a4d7a;
+            font-size: 13px;
+            padding: 8px;
+        }
+
+        .sub-table td {
+            padding: 8px;
+            font-size: 13px;
+        }
+
+        .sub-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #1e3a5f;
+            margin: 10px 0 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* ===== شريط التقدم ===== */
+        .progress-bar {
+            background: #e0e8f0;
+            border-radius: 20px;
+            height: 18px;
+            overflow: hidden;
+            position: relative;
+            min-width: 100px;
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, #f0b429, #27ae60);
+            height: 100%;
+            border-radius: 20px;
+            transition: width 0.4s ease;
+        }
+
+        .progress-text {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 11px;
+            font-weight: bold;
+            color: #1e3a5f;
+            line-height: 18px;
+        }
+
+        /* ===== الفوتر ===== */
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #6b7c93;
+            font-size: 13px;
+            margin-top: 40px;
+            border-top: 1px solid #e0e8f0;
+        }
+
+        /* ===== متجاوب ===== */
+        @media (max-width: 768px) {
+            .navbar { flex-direction: column; align-items: flex-start; }
+            .menu { overflow-x: auto; }
+            .menu a { white-space: nowrap; padding: 12px 14px; }
+            table { font-size: 12px; }
+            th, td { padding: 8px; }
+            .cards { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ===== الهيدر ===== -->
+    <div class="navbar">
+        <div class="brand">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="شعار قمح">
+            <div>
+                إدارة مشروع تأهيل صومعة
+                <span class="company-name">Qameh Group - مجموعة قمح</span>
+            </div>
+        </div>
+        <div class="nav-actions">
+            <span class="role-badge">
+                {% if session.get('username') %}{{ session.username }}{% else %}مدير تنفيذ{% endif %}
+            </span>
+            <a href="{{ url_for('index') }}">🏠 الرئيسية</a>
+            <a href="{{ url_for('logout') }}">🚪 خروج</a>
+        </div>
+    </div>
+
+    <!-- ===== القائمة ===== -->
+    <div class="menu">
+        <a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">الرئيسية</a>
+        <a href="{{ url_for('works') }}" class="{% if request.endpoint == 'works' %}active{% endif %}">فهرس الأعمال</a>
+        <a href="{{ url_for('workers') }}" class="{% if request.endpoint == 'workers' %}active{% endif %}">العمال</a>
+        <a href="{{ url_for('materials') }}" class="{% if request.endpoint == 'materials' %}active{% endif %}">المواد</a>
+        <a href="{{ url_for('daily_log') }}" class="{% if request.endpoint == 'daily_log' %}active{% endif %}">السجل اليومي</a>
+        <a href="{{ url_for('schedule') }}" class="{% if request.endpoint == 'schedule' %}active{% endif %}">الجدول الزمني</a>
+        <a href="{{ url_for('reports') }}" class="{% if request.endpoint == 'reports' %}active{% endif %}">التقارير</a>
+        <a href="{{ url_for('settings') }}" class="{% if request.endpoint == 'settings' %}active{% endif %}">الإعدادات</a> <!-- رابط الإعدادات الجديد -->
+    </div>
+
+    <!-- ===== المحتوى ===== -->
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- ===== الفوتر ===== -->
+    <div class="footer">
+        إدارة مشروع تأهيل صومعة © 2026 — مجموعة قمح (Qameh Group)
+    </div>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

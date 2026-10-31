@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}السجل اليومي — إدارة مشروع تأهيل صومعة{% endblock %}
+
+{% block content %}
+
+<!-- ===== عنوان الصفحة وزر التصدير ===== -->
+<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;">
+    <div class="page-title" style="margin-bottom: 0;">السجل اليومي للموقع</div>
+    <a href="{{ url_for('export_daily_log') }}" class="btn btn-primary" style="background: #27ae60; color: white;">📥 تصدير إلى إكسل</a>
+</div>
+
+<!-- ===== نموذج إضافة سجل يومي ===== -->
+<div class="form-box">
+    <div class="sub-title" style="font-size:16px; margin-bottom:12px;">➕ تسجيل يومية عمل جديدة</div>
+    <form method="POST" action="{{ url_for('add_daily_log') }}">
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:15px;">
+            <div class="form-group">
+                <label>التاريخ *</label>
+                <input type="date" name="date" required>
+            </div>
+            <div class="form-group">
+                <label>العمل المرتبط *</label>
+                <select name="work_id" required>
+                    <option value="">اختر العمل</option>
+                    {% for w in works %}
+                        <option value="{{ w.id }}">{{ w.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>عدد العمال الحاضرين *</label>
+                <input type="number" name="workers_count" min="0" required placeholder="مثال: 15">
+            </div>
+            <div class="form-group">
+                <label>ملاحظات (الأعمال المنجزة، الطقس، إلخ)</label>
+                <input type="text" name="notes" placeholder="تفاصيل اليوم...">
+            </div>
+        </div>
+        <button type="submit" class="btn btn-gold">💾 حفظ السجل</button>
+    </form>
+</div>
+
+<!-- ===== جدول السجل اليومي ===== -->
+<div class="form-box">
+    <div class="sub-title" style="font-size:16px; margin-bottom:12px;">📋 سجل الأيام السابقة</div>
+
+    {% if logs and logs|length > 0 %}
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>التاريخ</th>
+                <th>العمل المرتبط</th>
+                <th>عدد العمال</th>
+                <th>ملاحظات</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in logs %}
+            <tr>
+                <td>{{ log.id }}</td>
+                <td><strong>{{ log.date }}</strong></td>
+                <td>{{ log.work_name or '—' }}</td>
+                <td><span class="badge badge-done">{{ log.workers_count }} عامل</span></td>
+                <td>{{ log.notes or '—' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="font-size:14px; color:#6b7c93; text-align:center; padding:20px;">
+        لا يوجد سجلات يومية بعد. أضف أول سجل من النموذج أعلاه.
+    </p>
+    {% endif %}
+</div>
+
+{% endblock %}

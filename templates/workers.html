@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}العمال — إدارة مشروع تأهيل صومعة{% endblock %}
+
+{% block content %}
+
+<!-- ===== عنوان الصفحة وزر التصدير ===== -->
+<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;">
+    <div class="page-title" style="margin-bottom: 0;">إدارة العمال</div>
+    <a href="{{ url_for('export_workers') }}" class="btn btn-primary" style="background: #27ae60; color: white;">📥 تصدير إلى إكسل</a>
+</div>
+
+<!-- ===== نموذج إضافة عامل ===== -->
+<div class="form-box">
+    <div class="sub-title" style="font-size:16px; margin-bottom:12px;">➕ إضافة عامل جديد</div>
+    <form method="POST" action="{{ url_for('add_worker') }}">
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:15px;">
+            <div class="form-group">
+                <label>اسم العامل *</label>
+                <input type="text" name="name" required placeholder="الاسم الكامل">
+            </div>
+            <div class="form-group">
+                <label>الدور / المهنة</label>
+                <select name="role">
+                    <option value="">اختر المهنة</option>
+                    <option value="مشرف">مشرف</option>
+                    <option value="حداد">حداد</option>
+                    <option value="نجار">نجار</option>
+                    <option value="كهربائي">كهربائي</option>
+                    <option value="ميكانيكي">ميكانيكي</option>
+                    <option value="عامل">عامل</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>رقم الهاتف</label>
+                <input type="text" name="phone" placeholder="09xxxxxxxx">
+            </div>
+            <div class="form-group">
+                <label>الأجر اليومي</label>
+                <input type="number" name="daily_wage" step="0.01" placeholder="0.00">
+            </div>
+        </div>
+        <button type="submit" class="btn btn-gold">💾 حفظ العامل</button>
+    </form>
+</div>
+
+<!-- ===== جدول العمال ===== -->
+<div class="form-box">
+    <div class="sub-title" style="font-size:16px; margin-bottom:12px;">👷 قائمة العمال</div>
+
+    {% if workers and workers|length > 0 %}
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>اسم العامل</th>
+                <th>الدور</th>
+                <th>الهاتف</th>
+                <th>الأجر اليومي</th>
+                <th>الحالة</th>
+                <th>الإجراءات</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for worker in workers %}
+            <tr>
+                <td>{{ worker.id }}</td>
+                <td><strong>{{ worker.name }}</strong></td>
+                <td>{{ worker.role or '—' }}</td>
+                <td>{{ worker.phone or '—' }}</td>
+                <td>{{ worker.daily_wage or 0 }}</td>
+                <td>
+                    {% if worker.active == 1 %}
+                        <span class="badge badge-done">نشط</span>
+                    {% else %}
+                        <span class="badge badge-pending">غير نشط</span>
+                    {% endif %}
+                </td>
+                <td style="white-space: nowrap;">
+                    <button type="button" class="btn btn-gold btn-sm" 
+                        onclick="openEditModal('{{ worker.id }}', '{{ worker.name }}', '{{ worker.role }}', '{{ worker.phone }}', '{{ worker.daily_wage }}')">
+                        ✏️ تعديل
+                    </button>
+                    
+                    <form method="POST" action="{{ url_for('delete_worker', worker_id=worker.id) }}" style="display:inline;" onsubmit="return confirm('هل أنت متأكد من حذف هذا العامل نهائياً؟');">
+                        <button type="submit" class="btn btn-danger btn-sm">🗑️ حذف</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="font-size:14px; color:#6b7c93; text-align:center; padding:20px;">
+        لا يوجد عمال مسجلين بعد. أضف أول عامل من النموذج أعلاه.
+    </p>
+    {% endif %}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<!-- ===== نافذة التعديل المنبثقة (Modal) ===== -->
+<div id="editModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+    <div class="form-box" style="width:90%; max-width:500px; background:white; margin:50px auto; position:relative;">
+        <button onclick="closeEditModal()" style="position:absolute; top:10px; left:10px; background:none; border:none; font-size:20px; cursor:pointer;">✖</button>
+        
+        <div class="sub-title" style="font-size:18px; margin-bottom:15px;">✏️ تعديل بيانات العامل</div>
+        
+        <form id="editForm" method="POST" action="">
+            <div class="form-group">
+                <label>اسم العامل *</label>
+                <input type="text" name="name" id="edit_name" required>
+            </div>
+            <div class="form-group">
+                <label>الدور / المهنة</label>
+                <select name="role" id="edit_role">
+                    <option value="مشرف">مشرف</option>
+                    <option value="حداد">حداد</option>
+                    <option value="نجار">نجار</option>
+                    <option value="كهربائي">كهربائي</option>
+                    <option value="ميكانيكي">ميكانيكي</option>
+                    <option value="عامل">عامل</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>رقم الهاتف</label>
+                <input type="text" name="phone" id="edit_phone">
+            </div>
+            <div class="form-group">
+                <label>الأجر اليومي</label>
+                <input type="number" name="daily_wage" id="edit_daily_wage" step="0.01">
+            </div>
+            <button type="submit" class="btn btn-gold" style="width:100%;">💾 حفظ التعديلات</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openEditModal(id, name, role, phone, daily_wage) {
+        document.getElementById('edit_name').value = name;
+        document.getElementById('edit_role').value = role;
+        document.getElementById('edit_phone').value = phone;
+        document.getElementById('edit_daily_wage').value = daily_wage;
+        document.getElementById('editForm').action = "/workers/edit/" + id;
+        document.getElementById('editModal').style.display = 'flex';
+    }
+    function closeEditModal() {
+        document.getElementById('editModal').style.display = 'none';
+    }
+</script>
+{% endblock %}

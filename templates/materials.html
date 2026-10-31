@@ -1,0 +1,397 @@
+{% extends "base.html" %}
+
+{% block title %}المستودع الفرعي — إدارة مشروع تأهيل صومعة{% endblock %}
+
+{% block content %}
+
+<style>
+    .tabs { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 20px; border-bottom: 2px solid #cdd8e3; padding-bottom: 10px; }
+    .tab-btn { background: #e0e8f0; border: none; padding: 10px 20px; border-radius: 8px 8px 0 0; cursor: pointer; font-size: 15px; font-weight: bold; color: #1e3a5f; transition: 0.2s; }
+    .tab-btn:hover { background: #d0dae6; }
+    .tab-btn.active { background: #1e3a5f; color: #f0b429; }
+    .tab-content { display: none; animation: fadeIn 0.3s; }
+    .tab-content.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+</style>
+
+<div class="page-title">المستودع الفرعي للمشروع</div>
+
+<div class="tabs">
+    <button class="tab-btn active" onclick="openTab('tab-balance', this)">📊 الرصيد الحالي</button>
+    <button class="tab-btn" onclick="openTab('tab-receive', this)">📥 استلام (وارد)</button>
+    <button class="tab-btn" onclick="openTab('tab-issue', this)">📤 صرف (منصرف)</button>
+    <button class="tab-btn" onclick="openTab('tab-tools', this)">🛠️ عهدة العمال (العدة)</button>
+    <button class="tab-btn" onclick="openTab('tab-requests', this)">📝 طلبات التوريد</button>
+</div>
+
+<!-- 1. تبويب الرصيد الحالي -->
+<div id="tab-balance" class="tab-content active">
+    <div class="form-box" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <div class="sub-title" style="font-size:16px; margin:0;">📦 المواد المتوفرة بالمستودع</div>
+        <button class="btn btn-gold" onclick="document.getElementById('addMaterialForm').style.display='block'">+ إضافة مادة للدليل</button>
+    </div>
+
+    <div id="addMaterialForm" class="form-box" style="display:none; background:#f8fafc;">
+        <form method="POST" action="{{ url_for('add_material') }}">
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:15px;">
+                <div class="form-group">
+                    <label>اسم المادة الجديدة *</label>
+                    <input type="text" name="name" required placeholder="مثال: إسمنت، حديد">
+                </div>
+                <div class="form-group">
+                    <label>وحدة القياس</label>
+                    <input type="text" name="unit" placeholder="طن، كيس، متر مكعب">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">حفظ المادة</button>
+        </form>
+    </div>
+
+    {% if materials and materials|length > 0 %}
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>اسم المادة</th>
+                <th>الوحدة</th>
+                <th>الرصيد الحالي</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for m in materials %}
+            <tr>
+                <td>{{ m.id }}</td>
+                <td><strong>{{ m.name }}</strong></td>
+                <td>{{ m.unit or '—' }}</td>
+                <td>
+                    <strong style="color: {% if m.current_balance > 0 %}#27ae60{% else %}#c0392b{% endif %}; font-size: 16px;">
+                        {{ m.current_balance }}
+                    </strong>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="text-align:center; color:#6b7c93; padding:20px;">لا يوجد مواد مسجلة في الدليل. أضف مادة جديدة.</p>
+    {% endif %}
+</div>
+
+<!-- 2. تبويب الاستلام (الوارد) -->
+<div id="tab-receive" class="tab-content">
+    <div class="form-box">
+        <div class="sub-title" style="font-size:16px; margin-bottom:12px;">📥 تسجيل استلام مادة من المستودع الرئيسي</div>
+        <form method="POST" action="{{ url_for('receive_material') }}">
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:15px;">
+                <div class="form-group">
+                    <label>المادة</label>
+                    <select name="material_id" required>
+                        {% for m in materials %}
+                            <option value="{{ m.id }}">{{ m.name }} ({{ m.unit }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>الكمية المستلمة</label>
+                    <input type="number" name="quantity" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label>المستلم (اللي استلم بالمشروع)</label>
+                    <input type="text" name="received_by" value="{{ session.username }}" required>
+                </div>
+                <div class="form-group">
+                    <label>المرسل (المورد / المستودع الرئيسي)</label>
+                    <input type="text" name="sender_name" placeholder="مثال: مستودع قمح الرئيسي">
+                </div>
+                <div class="form-group">
+                    <label>رقم السيارة</label>
+                    <input type="text" name="vehicle_no" placeholder="مثال: 123456">
+                </div>
+                <div class="form-group">
+                    <label>ملاحظات إضافية</label>
+                    <input type="text" name="notes" placeholder="أي تفاصيل أخرى">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-gold">💾 تسجيل الاستلام</button>
+        </form>
+    </div>
+
+    <div class="form-box">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom:12px;">
+            <div class="sub-title" style="font-size:16px; margin:0;">📋 سجل الواردات</div>
+            <a href="{{ url_for('export_receipts') }}" class="btn btn-primary btn-sm" style="background: #27ae60; color: white;">📥 تصدير إكسل</a>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>التاريخ</th>
+                    <th>الوقت</th>
+                    <th>المادة</th>
+                    <th>الكمية</th>
+                    <th>المستلم</th>
+                    <th>المرسل</th>
+                    <th>السيارة</th>
+                    <th>ملاحظات</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in receipts %}
+                <tr>
+                    <td>{{ r.date }}</td>
+                    <td>{{ r.time }}</td>
+                    <td>{{ r.material_name }}</td>
+                    <td style="color:#27ae60; font-weight:bold;">+ {{ r.quantity }}</td>
+                    <td>{{ r.received_by }}</td>
+                    <td>{{ r.sender_name or '—' }}</td>
+                    <td>{{ r.vehicle_no or '—' }}</td>
+                    <td>{{ r.notes or '—' }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="8" style="text-align:center; color:#6b7c93;">لا يوجد سجل استلام بعد.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- 3. تبويب الصرف (المنصرف) -->
+<div id="tab-issue" class="tab-content">
+    <div class="form-box">
+        <div class="sub-title" style="font-size:16px; margin-bottom:12px;">📤 صرف مادة لعمل معين</div>
+        <form method="POST" action="{{ url_for('issue_material') }}">
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:15px;">
+                <div class="form-group">
+                    <label>المادة</label>
+                    <select name="material_id" required>
+                        {% for m in materials %}
+                            {% if m.current_balance > 0 %}
+                                <option value="{{ m.id }}">{{ m.name }} (المتوفر: {{ m.current_balance }})</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>العمل المرتبط</label>
+                    <select name="work_id" required>
+                        {% for w in works %}
+                            <option value="{{ w.id }}">{{ w.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>الكمية المصروفة</label>
+                    <input type="number" name="quantity" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label>المستلم (المهندس/المشرف)</label>
+                    <input type="text" name="issued_to" required>
+                </div>
+                <div class="form-group">
+                    <label>ملاحظات</label>
+                    <input type="text" name="notes" placeholder="سبب الصرف...">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-gold">💾 صرف المادة</button>
+        </form>
+    </div>
+
+    <div class="form-box">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom:12px;">
+            <div class="sub-title" style="font-size:16px; margin:0;">📋 سجل المنصرفات</div>
+            <a href="{{ url_for('export_issues') }}" class="btn btn-primary btn-sm" style="background: #27ae60; color: white;">📥 تصدير إكسل</a>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>التاريخ</th>
+                    <th>الوقت</th>
+                    <th>المادة</th>
+                    <th>الكمية</th>
+                    <th>العمل</th>
+                    <th>المستلم</th>
+                    <th>ملاحظات</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for i in issues %}
+                <tr>
+                    <td>{{ i.date }}</td>
+                    <td>{{ i.time }}</td>
+                    <td>{{ i.material_name }}</td>
+                    <td style="color:#c0392b; font-weight:bold;">- {{ i.quantity }}</td>
+                    <td>{{ i.work_name or '—' }}</td>
+                    <td>{{ i.issued_to }}</td>
+                    <td>{{ i.notes or '—' }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" style="text-align:center; color:#6b7c93;">لا يوجد سجل صرف بعد.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- 4. تبويب عهدة العمال (العدة اليومية) -->
+<div id="tab-tools" class="tab-content">
+    <div class="form-box">
+        <div class="sub-title" style="font-size:16px; margin-bottom:12px;">🛠️ تسليم عدة لعامل (بداية اليوم)</div>
+        <form method="POST" action="{{ url_for('checkout_tool') }}">
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:15px;">
+                <div class="form-group">
+                    <label>اسم العدة</label>
+                    <input type="text" name="tool_name" required placeholder="مثال: دسار، مطرقة، جاكات">
+                </div>
+                <div class="form-group">
+                    <label>اسم العامل</label>
+                    <input type="text" name="worker_name" required>
+                </div>
+                <div class="form-group">
+                    <label>الكمية</label>
+                    <input type="number" name="quantity" value="1" min="1">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-gold">💾 تسليم العدة</button>
+        </form>
+    </div>
+
+    <div class="form-box">
+        <div class="sub-title" style="font-size:16px; margin-bottom:12px;">📋 سجل العهدة اليومية</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>العدة</th>
+                    <th>العامل</th>
+                    <th>الكمية</th>
+                    <th>وقت التسليم</th>
+                    <th>وقت الإرجاع</th>
+                    <th>الحالة</th>
+                    <th>إجراء</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in tools %}
+                <tr>
+                    <td>{{ t.tool_name }}</td>
+                    <td>{{ t.worker_name }}</td>
+                    <td>{{ t.quantity }}</td>
+                    <td>{{ t.date_out }} - {{ t.time_out }}</td>
+                    <td>
+                        {% if t.date_in %}{{ t.date_in }} - {{ t.time_in }}{% else %}—{% endif %}
+                    </td>
+                    <td>
+                        {% if t.status == 'مع العامل' %}
+                            <span class="badge badge-progress">مع العامل</span>
+                        {% else %}
+                            <span class="badge badge-done">تم الإرجاع</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if t.status == 'مع العامل' %}
+                        <form method="POST" action="{{ url_for('checkin_tool', tool_id=t.id) }}">
+                            <button type="submit" class="btn btn-primary btn-sm">📥 استلام العدة</button>
+                        </form>
+                        {% else %}
+                        —
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" style="text-align:center; color:#6b7c93;">لا يوجد عهد مسجلة بعد.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- 5. تبويب طلبات التوريد -->
+<div id="tab-requests" class="tab-content">
+    <div class="form-box">
+        <div class="sub-title" style="font-size:16px; margin-bottom:12px;">📝 طلب مادة من المستودع الرئيسي</div>
+        <form method="POST" action="{{ url_for('request_material') }}">
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:15px;">
+                <div class="form-group">
+                    <label>اسم المادة</label>
+                    <input type="text" name="material_name" required>
+                </div>
+                <div class="form-group">
+                    <label>الكمية</label>
+                    <input type="number" name="quantity" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label>الوحدة</label>
+                    <input type="text" name="unit" placeholder="كيس، طن...">
+                </div>
+                <div class="form-group">
+                    <label>مقدم الطلب</label>
+                    <input type="text" name="requested_by" value="{{ session.username }}" required>
+                </div>
+                <div class="form-group">
+                    <label>ملاحظات</label>
+                    <input type="text" name="notes">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-gold">📤 إرسال الطلب</button>
+        </form>
+    </div>
+
+    <div class="form-box">
+        <div class="sub-title" style="font-size:16px; margin-bottom:12px;">📋 سجل الطلبات</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>التاريخ</th>
+                    <th>المادة</th>
+                    <th>الكمية</th>
+                    <th>مقدم الطلب</th>
+                    <th>الحالة</th>
+                    <th>ملاحظات</th>
+                    <th>إجراء</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in requests_list %}
+                <tr>
+                    <td>{{ r.date }}</td>
+                    <td>{{ r.material_name }}</td>
+                    <td>{{ r.quantity }} {{ r.unit or '' }}</td>
+                    <td>{{ r.requested_by }}</td>
+                    <td>
+                        <span class="badge {% if r.status == 'تم التوريد' %}badge-done{% else %}badge-progress{% endif %}">{{ r.status }}</span>
+                    </td>
+                    <td>{{ r.notes or '—' }}</td>
+                    <td>
+                        {% if r.status == 'قيد الانتظار' %}
+                        <form method="POST" action="{{ url_for('approve_request', req_id=r.id) }}">
+                            <button type="submit" class="btn btn-primary btn-sm">✔️ تم التوريد</button>
+                        </form>
+                        {% else %}
+                        —
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" style="text-align:center; color:#6b7c93;">لا يوجد طلبات توريد بعد.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function openTab(tabId, btn) {
+        var contents = document.getElementsByClassName("tab-content");
+        for (var i = 0; i < contents.length; i++) {
+            contents[i].classList.remove("active");
+        }
+        var buttons = document.getElementsByClassName("tab-btn");
+        for (var i = 0; i < buttons.length; i++) {
+            buttons[i].classList.remove("active");
+        }
+        document.getElementById(tabId).classList.add("active");
+        btn.classList.add("active");
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}التقارير — إدارة مشروع تأهيل صومعة{% endblock %}
+
+{% block content %}
+
+<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;">
+    <div class="page-title" style="margin-bottom: 0;">تقارير المشروع</div>
+    <a href="{{ url_for('export_reports') }}" class="btn btn-primary" style="background: #27ae60; color: white;">📥 تصدير التقرير إلى إكسل</a>
+</div>
+
+<div class="cards">
+    {% for s in status_counts %}
+    <div class="card {% if s.status == 'منجز' %}green{% elif s.status == 'جاري' %}orange{% else %}gold{% endif %}">
+        <div class="label">أعمال {{ s.status }}</div>
+        <div class="value">{{ s.count }}</div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="form-box">
+    <div class="sub-title" style="font-size:16px; margin-bottom:12px;">📊 توزيع الأعمال حسب المرحلة</div>
+    {% if phase_counts and phase_counts|length > 0 %}
+    <table>
+        <thead><tr><th>المرحلة</th><th>عدد الأعمال</th></tr></thead>
+        <tbody>
+            {% for p in phase_counts %}
+            <tr><td><strong>{{ p.phase }}</strong></td><td><span class="badge badge-progress">{{ p.count }} عمل</span></td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="text-align:center; color:#6b7c93;">لا توجد بيانات مراحل بعد.</p>
+    {% endif %}
+</div>
+
+<div class="form-box">
+    <div class="sub-title" style="font-size:16px; margin-bottom:12px;">⏳ الأعمال قيد التنفيذ (لم تكتمل بعد)</div>
+    {% if pending_works and pending_works|length > 0 %}
+    <table>
+        <thead>
+            <tr><th>#</th><th>اسم العمل</th><th>المرحلة</th><th>المسؤول</th><th>نسبة الإنجاز</th><th>الحالة</th></tr>
+        </thead>
+        <tbody>
+            {% for work in pending_works %}
+            <tr>
+                <td>{{ work.id }}</td>
+                <td><strong>{{ work.name }}</strong></td>
+                <td>{{ work.phase }}</td>
+                <td>{{ work.responsible or '—' }}</td>
+                <td><div class="progress-bar"><div class="progress-fill" style="width: {{ work.progress }}%;"></div><div class="progress-text">{{ work.progress }}%</div></div></td>
+                <td>
+                    {% if work.status == 'جاري' %}<span class="badge badge-progress">جاري</span>
+                    {% else %}<span class="badge badge-pending">لم يبدأ</span>{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="font-size:14px; color:#27ae60; text-align:center; padding:20px; font-weight:bold;">🎉 ممتاز! جميع الأعمال مكتملة 100%.</p>
+    {% endif %}
+</div>
+
+{% endblock %}

@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}الرئيسية — إدارة مشروع تأهيل صومعة{% endblock %}
+
+{% block content %}
+
+<div class="page-title">لوحة المتابعة الرئيسية</div>
+
+<!-- ===== بطاقات الإحصائيات ===== -->
+<div class="cards">
+    <div class="card">
+        <div class="label">إجمالي الأعمال</div>
+        <div class="value">{{ total_works }}</div>
+    </div>
+
+    <div class="card gold">
+        <div class="label">أعمال جارية</div>
+        <div class="value">{{ active_works }}</div>
+    </div>
+
+    <div class="card green">
+        <div class="label">أعمال منجزة</div>
+        <div class="value">{{ done_works }}</div>
+    </div>
+
+    <div class="card orange">
+        <div class="label">العمال النشطون</div>
+        <div class="value">{{ total_workers }}</div>
+    </div>
+
+    <div class="card red">
+        <div class="label">متوسط نسبة الإنجاز</div>
+        <div class="value">{{ avg_progress }}%</div>
+    </div>
+</div>
+
+<!-- ===== شريط تقدم عام ===== -->
+<div class="form-box">
+    <div class="sub-title" style="font-size:16px; margin-bottom:12px;">
+        📊 نسبة الإنجاز الإجمالية للمشروع
+    </div>
+    <div class="progress-bar" style="height:26px;">
+        <div class="progress-fill" style="width: {{ avg_progress }}%;"></div>
+        <div class="progress-text" style="line-height:26px; font-size:13px;">
+            {{ avg_progress }}%
+        </div>
+    </div>
+</div>
+
+<!-- ===== روابط سريعة ===== -->
+<div class="form-box">
+    <div class="sub-title" style="font-size:16px; margin-bottom:12px;">
+        ⚡ إجراءات سريعة
+    </div>
+    <div style="display:flex; flex-wrap:wrap; gap:10px;">
+        <a href="{{ url_for('works') }}" class="btn btn-primary">📋 فهرس الأعمال</a>
+        <a href="{{ url_for('workers') }}" class="btn btn-gold">👷 العمال</a>
+        <a href="{{ url_for('materials') }}" class="btn btn-primary">📦 المواد</a>
+        <a href="{{ url_for('daily_log') }}" class="btn btn-gold">📝 السجل اليومي</a>
+        <a href="{{ url_for('schedule') }}" class="btn btn-primary">📅 الجدول الزمني</a>
+        <a href="{{ url_for('reports') }}" class="btn btn-gold">📈 التقارير</a>
+    </div>
+</div>
+
+<!-- ===== بطاقة المشروع (تقرأ من الإعدادات) ===== -->
+<div class="form-box">
+    <div class="sub-title" style="font-size:16px; margin-bottom:12px;">
+        🏭 بطاقة المشروع
+    </div>
+    <table>
+        <tr>
+            <th style="width:30%;">البند</th>
+            <th>التفصيل</th>
+        </tr>
+        <tr>
+            <td>اسم المشروع</td>
+            <td>{{ project_settings.project_name if project_settings else 'إعادة تأهيل صوامع العالية بشكل كامل' }}</td>
+        </tr>
+        <tr>
+            <td>الموقع</td>
+            <td>{{ project_settings.location if project_settings else 'طريق M4 — قرب قرية الحويش، تل تمر، محافظة الحسكة' }}</td>
+        </tr>
+        <tr>
+            <td>الإحداثيات</td>
+            <td>{{ project_settings.coordinates if project_settings else '36.5958735, 40.107007' }}</td>
+        </tr>
+        <tr>
+            <td>نطاق العمل</td>
+            <td>{{ project_settings.scope if project_settings else 'أعمال مدنية + معدنية + كهروميكانيك + تشغيل تجريبي' }}</td>
+        </tr>
+        <tr>
+            <td>مدير التنفيذ</td>
+            <td>{{ project_settings.manager if project_settings else '—' }}</td>
+        </tr>
+    </table>
+</div>
+
+{% endblock %}
