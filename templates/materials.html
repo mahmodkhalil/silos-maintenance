@@ -270,25 +270,19 @@
                     <td>{{ r.received_by }}</td>
                     <td>{{ r.sender_name or '—' }}</td>
                     <td>
-                        <input type="text" value="{{ r.vehicle_no or '' }}" placeholder="أدخل رقم السيارة" style="width:100px; padding:4px; border:1px solid #cdd8e3; border-radius:4px;">
+                        <form method="POST" action="{{ url_for('update_receipt_details', receipt_id=r.id) }}" style="display:flex; gap:5px; align-items:center;">
+                            <input type="text" name="vehicle_no" value="{{ r.vehicle_no or '' }}" placeholder="رقم السيارة" style="width:90px; padding:4px; border:1px solid #cdd8e3; border-radius:4px;">
+                            <input type="text" name="notes" value="{{ r.notes or '' }}" placeholder="ملاحظات" style="width:90px; padding:4px; border:1px solid #cdd8e3; border-radius:4px;">
+                            <button type="submit" class="btn btn-primary btn-sm">💾</button>
+                        </form>
                     </td>
                     <td><strong>{{ r.material_code or '—' }}</strong></td>
-                    <td>
-                        <input type="text" value="" placeholder="ملاحظات" style="width:100px; padding:4px; border:1px solid #cdd8e3; border-radius:4px;">
-                    </td>
                 </tr>
                 {% else %}
-                <tr><td colspan="9" style="text-align:center; color:#6b7c93;">لا يوجد سجل استلام بعد.</td></tr>
+                <tr><td colspan="8" style="text-align:center; color:#6b7c93;">لا يوجد سجل استلام بعد.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
-    </div>
-
-    <!-- زر "تم الاطلاع" (خارج الفورم) -->
-    <div style="text-align:center; margin-top:20px;">
-        <a href="{{ url_for('materials') }}" class="btn btn-gold" style="font-size:18px; padding:12px 30px;">
-            ✅ تم الاطلاع - الرجوع للمستودع
-        </a>
     </div>
 </div>
 
