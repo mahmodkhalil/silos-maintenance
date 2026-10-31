@@ -111,119 +111,6 @@ def init_db():
     conn.close()
 
 init_db()
-from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file
-import sqlite3
-from datetime import datetime
-from functools import wraps
-import pandas as pd
-import io
-
-app = Flask(__name__)
-app.secret_key = "silos_maintenance_secret_key_2026"
-DB_NAME = "database.db"
-
-# ============ قاعدة البيانات ============
-def get_connection():
-    conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-def init_db():
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS works (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL, phase TEXT NOT NULL, start_date TEXT, end_date TEXT, 
-            duration INTEGER, responsible TEXT, status TEXT DEFAULT 'لم يبدأ', 
-            progress INTEGER DEFAULT 0, notes TEXT
-        )
-    """)
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS workers (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL, role TEXT, phone TEXT, daily_wage REAL, active INTEGER DEFAULT 1
-        )
-    """)
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS worker_attendance (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            worker_id INTEGER, date TEXT, status TEXT, overtime_hours REAL DEFAULT 0, notes TEXT,
-            FOREIGN KEY (worker_id) REFERENCES workers(id)
-        )
-    """)
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS materials (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL, unit TEXT, current_balance REAL DEFAULT 0,
-            material_type TEXT DEFAULT 'مستهلكة', notes TEXT, material_code TEXT
-        )
-    """)
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS material_receipts (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            material_id INTEGER, quantity REAL, date TEXT, time TEXT, 
-            received_by TEXT, sender_name TEXT, vehicle_no TEXT, notes TEXT,
-            FOREIGN KEY (material_id) REFERENCES materials(id)
-        )
-    """)
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS material_issues (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            material_id INTEGER, work_id INTEGER, quantity REAL, date TEXT, time TEXT, 
-            issued_to TEXT, notes TEXT,
-            FOREIGN KEY (material_id) REFERENCES materials(id),
-            FOREIGN KEY (work_id) REFERENCES works(id)
-        )
-    """)
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS tools_ledger (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            tool_name TEXT NOT NULL, worker_name TEXT, quantity INTEGER DEFAULT 1, 
-            date_out TEXT, time_out TEXT, date_in TEXT, time_in TEXT, status TEXT DEFAULT 'مع العامل'
-        )
-    """)
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS material_requests (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            material_name TEXT NOT NULL, quantity REAL, unit TEXT, 
-            requested_by TEXT, date TEXT, status TEXT DEFAULT 'قيد الانتظار', notes TEXT
-        )
-    """)
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS project_settings (
-            id INTEGER PRIMARY KEY, project_name TEXT, location TEXT, coordinates TEXT, scope TEXT, manager TEXT
-        )
-    """)
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS daily_log (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            date TEXT NOT NULL, work_id INTEGER, workers_count INTEGER, notes TEXT,
-            FOREIGN KEY (work_id) REFERENCES works(id)
-        )
-    """)
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS work_workers (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            work_id INTEGER, worker_id INTEGER, assigned_date TEXT,
-            FOREIGN KEY (work_id) REFERENCES works(id), FOREIGN KEY (worker_id) REFERENCES workers(id)
-        )
-    """)
-
-    conn.commit()
-    conn.close()
-
-init_db()
 
 # ============ تسجيل الدخول ============
 def login_required(f):
@@ -785,6 +672,25 @@ def import_receipts():
     except Exception as e:
         flash(f"حدث خطأ أثناء قراءة الملف: {str(e)}", "danger")
         
+    return redirect(url_for("materials"))
+
+# ============ تحديث تفاصيل الوارد (السيارة والملاحظات) ============
+@app.route("/materials/update_receipt/<int:receipt_id>", methods=["POST"])
+@login_required
+def update_receipt_details(receipt_id):
+    vehicle_no = request.form.get("vehicle_no")
+    notes = request.form.get("notes")
+    
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE material_receipts 
+        SET vehicle_no = ?, notes = ?
+        WHERE id = ?
+    """, (vehicle_no, notes, receipt_id))
+    conn.commit()
+    conn.close()
+    flash("تم تحديث بيانات الوارد بنجاح", "success")
     return redirect(url_for("materials"))
 
 @app.route("/materials/receive", methods=["POST"])
