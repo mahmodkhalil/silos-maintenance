@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}تقارير الواردات — إدارة مشروع تأهيل صومعة{% endblock %}
+
+{% block content %}
+
+<div class="page-title">تقارير الواردات</div>
+
+<!-- فورم البحث -->
+<div class="form-box">
+    <form method="POST">
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:15px;">
+            <div class="form-group">
+                <label>الشهر (YYYY-MM)</label>
+                <input type="month" name="month">
+            </div>
+            <div class="form-group">
+                <label>اسم المادة</label>
+                <input type="text" name="material_name" placeholder="بحث بالاسم...">
+            </div>
+        </div>
+        <button type="submit" class="btn btn-gold">🔍 بحث</button>
+        <a href="{{ url_for('materials') }}" class="btn btn-primary" style="margin-right:10px;">↩️ العودة للمستودع</a>
+    </form>
+</div>
+
+<!-- جدول النتائج -->
+<div class="form-box">
+    <table>
+        <thead>
+            <tr>
+                <th>التاريخ</th>
+                <th>المادة</th>
+                <th>الوحدة</th>
+                <th>الكمية</th>
+                <th>المستلم</th>
+                <th>المرسل</th>
+                <th>رقم السيارة</th>
+                <th>رمز المادة</th>
+                <th>ملاحظات</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in receipts %}
+            <tr>
+                <td>{{ r.date }}</td>
+                <td>{{ r.material_name }}</td>
+                <td>{{ r.unit or '—' }}</td>
+                <td>+ {{ r.quantity }}</td>
+                <td>{{ r.received_by }}</td>
+                <td>{{ r.sender_name or '—' }}</td>
+                <td>{{ r.vehicle_no or '—' }}</td>
+                <td>{{ r.material_code or '—' }}</td>
+                <td>{{ r.notes or '—' }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="9" style="text-align:center; color:#6b7c93;">لا يوجد نتائج مطابقة.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}
