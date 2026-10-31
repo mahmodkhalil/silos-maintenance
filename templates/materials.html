@@ -44,6 +44,10 @@
                     <input type="text" name="name" required placeholder="مثال: إسمنت، حديد">
                 </div>
                 <div class="form-group">
+                    <label>الرمز (Code)</label>
+                    <input type="text" name="material_code" placeholder="مثال: *02">
+                </div>
+                <div class="form-group">
                     <label>وحدة القياس</label>
                     <input type="text" name="unit" placeholder="طن، كيس، متر مكعب">
                 </div>
@@ -99,7 +103,7 @@
                     <td><input type="checkbox" name="selected_materials" value="{{ m.id }}" class="consumable_cb"></td>
                     <td>{{ m.id }}</td>
                     <td><strong>{{ m.name }}</strong></td>
-                    <td>{{ m.notes or '—' }}</td>
+                    <td><strong>{{ m.material_code or '—' }}</strong></td>
                     <td>{{ m.unit or '—' }}</td>
                     <td>
                         <strong style="color: {% if m.current_balance > 0 %}#27ae60{% else %}#c0392b{% endif %}; font-size: 16px;">
@@ -109,7 +113,7 @@
                     <td>{{ m.notes or '—' }}</td>
                     <td style="white-space: nowrap;">
                         <button type="button" class="btn btn-gold btn-sm" 
-                            onclick="openEditMaterialModal('{{ m.id }}', '{{ m.name }}', '{{ m.unit }}', '{{ m.material_type }}', '{{ m.current_balance }}', '{{ m.notes }}')">
+                            onclick="openEditMaterialModal('{{ m.id }}', '{{ m.name }}', '{{ m.unit }}', '{{ m.material_type }}', '{{ m.current_balance }}', '{{ m.notes }}', '{{ m.material_code }}')">
                             ✏️
                         </button>
                         <button type="button" class="btn btn-danger btn-sm" onclick="deleteSingle({{ m.id }})">🗑️</button>
@@ -143,7 +147,7 @@
                     <td><input type="checkbox" name="selected_materials" value="{{ m.id }}" class="equipment_cb"></td>
                     <td>{{ m.id }}</td>
                     <td><strong>{{ m.name }}</strong></td>
-                    <td>{{ m.notes or '—' }}</td>
+                    <td><strong>{{ m.material_code or '—' }}</strong></td>
                     <td>{{ m.unit or '—' }}</td>
                     <td>
                         <strong style="color: #1e3a5f; font-size: 16px;">
@@ -153,7 +157,7 @@
                     <td>{{ m.notes or '—' }}</td>
                     <td style="white-space: nowrap;">
                         <button type="button" class="btn btn-gold btn-sm" 
-                            onclick="openEditMaterialModal('{{ m.id }}', '{{ m.name }}', '{{ m.unit }}', '{{ m.material_type }}', '{{ m.current_balance }}', '{{ m.notes }}')">
+                            onclick="openEditMaterialModal('{{ m.id }}', '{{ m.name }}', '{{ m.unit }}', '{{ m.material_type }}', '{{ m.current_balance }}', '{{ m.notes }}', '{{ m.material_code }}')">
                             ✏️
                         </button>
                         <button type="button" class="btn btn-danger btn-sm" onclick="deleteSingle({{ m.id }})">🗑️</button>
@@ -509,6 +513,7 @@
         <div class="sub-title" style="font-size:18px; margin-bottom:15px;">✏️ تعديل بيانات المادة</div>
         <form id="editMaterialForm" method="POST" action="">
             <div class="form-group"><label>اسم المادة *</label><input type="text" name="name" id="edit_mat_name" required></div>
+            <div class="form-group"><label>الرمز (Code)</label><input type="text" name="material_code" id="edit_mat_code"></div>
             <div class="form-group"><label>الوحدة</label><input type="text" name="unit" id="edit_mat_unit"></div>
             <div class="form-group">
                 <label>النوع</label>
@@ -539,12 +544,13 @@
         btn.classList.add("active");
     }
 
-    function openEditMaterialModal(id, name, unit, type, balance, notes) {
+    function openEditMaterialModal(id, name, unit, type, balance, notes, code) {
         document.getElementById('edit_mat_name').value = name;
         document.getElementById('edit_mat_unit').value = unit;
         document.getElementById('edit_mat_type').value = type;
         document.getElementById('edit_mat_balance').value = balance;
         document.getElementById('edit_mat_notes').value = notes;
+        document.getElementById('edit_mat_code').value = code;
         document.getElementById('editMaterialForm').action = "/materials/edit/" + id;
         document.getElementById('editMaterialModal').style.display = 'flex';
     }
