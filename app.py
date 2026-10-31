@@ -19,6 +19,7 @@ def init_db():
     conn = get_connection()
     cursor = conn.cursor()
 
+    # جدول الأعمال
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS works (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -28,6 +29,7 @@ def init_db():
         )
     """)
 
+    # جدول العمال
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS workers (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -35,6 +37,7 @@ def init_db():
         )
     """)
 
+    # جدول دوام العمال
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS worker_attendance (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -47,6 +50,7 @@ def init_db():
         )
     """)
 
+    # جدول المواد (مع عمود الملاحظات)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS materials (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -56,6 +60,7 @@ def init_db():
         )
     """)
 
+    # جدول الاستلام
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS material_receipts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -65,6 +70,7 @@ def init_db():
         )
     """)
 
+    # جدول الصرف
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS material_issues (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -75,6 +81,7 @@ def init_db():
         )
     """)
 
+    # جدول العهدة
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS tools_ledger (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -83,6 +90,7 @@ def init_db():
         )
     """)
 
+    # جدول الطلبات
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS material_requests (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -91,6 +99,7 @@ def init_db():
         )
     """)
 
+    # جدول إعدادات المشروع
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS project_settings (
             id INTEGER PRIMARY KEY,
@@ -102,6 +111,7 @@ def init_db():
         )
     """)
 
+    # السجل اليومي وربط العمال
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS daily_log (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -121,7 +131,7 @@ def init_db():
     conn.commit()
     conn.close()
 
-# إنشاء قاعدة البيانات عند التشغيل
+# إنشاء قاعدة البيانات عند التشغيل (حتى مع gunicorn)
 init_db()
 
 # ============ تسجيل الدخول ============
@@ -574,7 +584,7 @@ def import_materials():
         
     return redirect(url_for("materials"))
 
-# ============ استيراد الواردات من إكسل ============
+# ============ استيراد الواردات من إكسل (متوافق مع ملفك) ============
 @app.route("/materials/import_receipts", methods=["POST"])
 @login_required
 def import_receipts():
@@ -588,25 +598,23 @@ def import_receipts():
         
         name_col = None
         qty_col = None
-        sender_col = None
-        vehicle_col = None
-        notes_col = None
+        unit_col = None
+        code_col = None
         
+        # البحث الذكي عن الأعمدة (يدعم أسماء ملفك: المادة، الاجمالي، الواحدة، الرمز)
         for col in df.columns:
             col_str = str(col).strip()
             if 'اسم' in col_str or 'مادة' in col_str or 'Material' in col_str:
                 name_col = col
-            elif 'كمية' in col_str or 'Quantity' in col_str:
+            elif 'كمية' in col_str or 'Quantity' in col_str or 'اجمالي' in col_str or 'إجمالي' in col_str:
                 qty_col = col
-            elif 'مرسل' in col_str or 'مورد' in col_str or 'Sender' in col_str:
-                sender_col = col
-            elif 'سيارة' in col_str or 'Vehicle' in col_str:
-                vehicle_col = col
-            elif 'ملاحظ' in col_str or 'Notes' in col_str:
-                notes_col = col
+            elif 'وحدة' in col_str or 'Unit' in col_str or 'واحدة' in col_str:
+                unit_col = col
+            elif 'رمز' in col_str or 'Code' in col_str:
+                code_col = col
                 
         if not name_col or not qty_col:
-            flash("تأكد من أن ملف الإكسل يحتوي على أعمدة: 'اسم المادة' و 'الكمية'", "danger")
+            flash("تأكد من أن ملف الإكسل يحتوي على أعمدة: 'المادة' و 'الاجمالي'", "danger")
             return redirect(url_for("materials"))
             
         conn = get_connection()
@@ -619,9 +627,8 @@ def import_receipts():
         for index, row in df.iterrows():
             name = str(row[name_col]).strip() if pd.notna(row[name_col]) else ''
             quantity = float(row[qty_col]) if pd.notna(row[qty_col]) else 0
-            sender = str(row[sender_col]).strip() if sender_col and pd.notna(row[sender_col]) else 'مستودع رئيسي'
-            vehicle = str(row[vehicle_col]).strip() if vehicle_col and pd.notna(row[vehicle_col]) else ''
-            notes = str(row[notes_col]).strip() if notes_col and pd.notna(row[notes_col]) else ''
+            unit = str(row[unit_col]).strip() if unit_col and pd.notna(row[unit_col]) else 'وحدة'
+            code = str(row[code_col]).strip() if code_col and pd.notna(row[code_col]) else ''
             
             if name and quantity > 0:
                 cursor.execute("SELECT id FROM materials WHERE name = ?", (name,))
@@ -629,19 +636,19 @@ def import_receipts():
                 if mat:
                     material_id = mat["id"]
                 else:
-                    cursor.execute("INSERT INTO materials (name, unit, material_type) VALUES (?, 'وحدة', 'مستهلكة')", (name,))
+                    cursor.execute("INSERT INTO materials (name, unit, material_type) VALUES (?, ?, 'مستهلكة')", (name, unit))
                     material_id = cursor.lastrowid
                 
                 cursor.execute("UPDATE materials SET current_balance = current_balance + ? WHERE id = ?", (quantity, material_id))
                 cursor.execute("""
                     INSERT INTO material_receipts (material_id, quantity, date, time, received_by, sender_name, vehicle_no, notes)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """, (material_id, quantity, date, time, received_by, sender, vehicle, notes))
+                """, (material_id, quantity, date, time, received_by, 'مستودع رئيسي', code, code))
                 count += 1
                 
         conn.commit()
         conn.close()
-        flash(f"تم استيراد {count} وارد بنجاح وتحديث الرصيد", "success")
+        flash(f"تم استيراد {count} مادة بنجاح وتحديث الرصيد", "success")
     except Exception as e:
         flash(f"حدث خطأ أثناء قراءة الملف: {str(e)}", "danger")
         
