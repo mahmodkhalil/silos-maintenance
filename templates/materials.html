@@ -67,6 +67,7 @@
         </form>
     </div>
 
+    <!-- نموذج الحذف الجماعي (فقط للمواد) -->
     <form method="POST" action="{{ url_for('bulk_delete_materials') }}" onsubmit="return confirm('هل أنت متأكد من حذف كل المواد المحددة؟');">
         <div style="display: flex; justify-content: flex-end; margin-bottom: 10px;">
             <button type="submit" class="btn btn-danger">🗑️ حذف المواد المحددة</button>
@@ -221,7 +222,7 @@
         </form>
     </div>
 
-    <!-- نموذج استيراد الواردات من إكسل مع المعاينة -->
+    <!-- نموذج استيراد الواردات من إكسل -->
     <div class="file-input-wrapper">
         <form method="POST" action="{{ url_for('import_receipts') }}" enctype="multipart/form-data" id="importReceiptsForm" style="width:100%;">
             <div style="display:flex; gap:10px; align-items:center;">
@@ -270,12 +271,10 @@
                     <td>{{ r.received_by }}</td>
                     <td>{{ r.sender_name or '—' }}</td>
                     <td>
-                        <!-- خانة رقم السيارة -->
                         <input type="text" value="{{ r.vehicle_no or '' }}" placeholder="أدخل رقم السيارة" style="width:100px; padding:4px; border:1px solid #cdd8e3; border-radius:4px;">
                     </td>
-                    <td><strong>{{ r.notes or '—' }}</strong></td> <!-- الرمز مخزن بالملاحظات -->
+                    <td><strong>{{ r.notes or '—' }}</strong></td>
                     <td>
-                        <!-- خانة الملاحظات -->
                         <input type="text" value="" placeholder="ملاحظات" style="width:100px; padding:4px; border:1px solid #cdd8e3; border-radius:4px;">
                     </td>
                 </tr>
@@ -286,7 +285,7 @@
         </table>
     </div>
 
-    <!-- زر "تم الاطلاع" -->
+    <!-- زر "تم الاطلاع" (خارج الفورم) -->
     <div style="text-align:center; margin-top:20px;">
         <a href="{{ url_for('materials') }}" class="btn btn-gold" style="font-size:18px; padding:12px 30px;">
             ✅ تم الاطلاع - الرجوع للمستودع
