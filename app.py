@@ -336,8 +336,24 @@ def workers():
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM workers ORDER BY id")
     workers_list = cursor.fetchall()
+    
+    cursor.execute("""
+        SELECT wa.*, w.name as worker_name 
+        FROM worker_attendance wa 
+        JOIN workers w ON wa.worker_id = w.id 
+        ORDER BY wa.date DESC
+    """)
+    all_attendance = cursor.fetchall()
+    
+    attendance_by_worker = {}
+    for a in all_attendance:
+        wid = a["worker_id"]
+        if wid not in attendance_by_worker:
+            attendance_by_worker[wid] = []
+        attendance_by_worker[wid].append(dict(a))
+        
     conn.close()
-    return render_template("workers.html", workers=workers_list)
+    return render_template("workers.html", workers=workers_list, attendance_by_worker=attendance_by_worker)
 
 @app.route("/workers/add", methods=["POST"])
 @login_required
