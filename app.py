@@ -4,6 +4,7 @@ from datetime import datetime
 from functools import wraps
 import pandas as pd
 import io
+import os
 
 app = Flask(__name__)
 app.secret_key = "silos_maintenance_secret_key_2026"
@@ -50,7 +51,7 @@ def init_db():
         )
     """)
 
-    # جدول المواد (تم إضافة عمود النوع)
+    # جدول المواد
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS materials (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -129,6 +130,9 @@ def init_db():
 
     conn.commit()
     conn.close()
+
+# إنشاء قاعدة البيانات عند تشغيل التطبيق
+init_db()
 
 # ============ تسجيل الدخول ============
 def login_required(f):
@@ -499,7 +503,6 @@ def add_material():
     flash("تمت إضافة المادة إلى الدليل", "success")
     return redirect(url_for("materials"))
 
-# ============ استيراد المواد من إكسل (ذكي) ============
 @app.route("/materials/import", methods=["POST"])
 @login_required
 def import_materials():
