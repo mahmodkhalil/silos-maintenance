@@ -4,9 +4,12 @@
 
 {% block content %}
 
-<!-- ===== عنوان الصفحة وزر التصدير ===== -->
+<!-- ===== عنوان الصفحة وأزرار التصدير والدوام ===== -->
 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;">
-    <div class="page-title" style="margin-bottom: 0;">إدارة العمال</div>
+    <div style="display: flex; gap: 10px; align-items: center;">
+        <div class="page-title" style="margin-bottom: 0;">إدارة العمال</div>
+        <a href="{{ url_for('worker_attendance') }}" class="btn btn-gold">🕒 سجل الدوام والإضافي</a>
+    </div>
     <a href="{{ url_for('export_workers') }}" class="btn btn-primary" style="background: #27ae60; color: white;">📥 تصدير إلى إكسل</a>
 </div>
 
@@ -145,6 +148,7 @@
         document.getElementById('editForm').action = "/workers/edit/" + id;
         document.getElementById('editModal').style.display = 'flex';
     }
+
     function closeEditModal() {
         document.getElementById('editModal').style.display = 'none';
     }
