@@ -252,12 +252,13 @@
                     <th>التاريخ</th>
                     <th>الوقت</th>
                     <th>المادة</th>
+                    <th>الوحدة</th>
                     <th>الكمية</th>
                     <th>المستلم</th>
                     <th>المرسل</th>
                     <th>رقم السيارة</th>
                     <th>رمز المادة</th>
-                    <th>ملاحظات</th>
+                    <th>حذف</th>
                 </tr>
             </thead>
             <tbody>
@@ -266,6 +267,7 @@
                     <td>{{ r.date }}</td>
                     <td>{{ r.time }}</td>
                     <td>{{ r.material_name }}</td>
+                    <td>{{ r.unit or '—' }}</td>
                     <td style="color:#27ae60; font-weight:bold;">+ {{ r.quantity }}</td>
                     <td>{{ r.received_by }}</td>
                     <td>{{ r.sender_name or '—' }}</td>
@@ -277,12 +279,24 @@
                         </form>
                     </td>
                     <td><strong>{{ r.material_code or '—' }}</strong></td>
+                    <td>
+                        <form method="POST" action="{{ url_for('delete_receipt', receipt_id=r.id) }}" onsubmit="return confirm('هل أنت متأكد من حذف هذا الوارد؟');">
+                            <button type="submit" class="btn btn-danger btn-sm">🗑️</button>
+                        </form>
+                    </td>
                 </tr>
                 {% else %}
-                <tr><td colspan="8" style="text-align:center; color:#6b7c93;">لا يوجد سجل استلام بعد.</td></tr>
+                <tr><td colspan="10" style="text-align:center; color:#6b7c93;">لا يوجد سجل استلام بعد.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
+    </div>
+    
+    <!-- زر الانتقال لتقارير الواردات -->
+    <div style="text-align:center; margin-top:20px;">
+        <a href="{{ url_for('receipts_report') }}" class="btn btn-primary" style="font-size:16px; padding:10px 25px;">
+            📊 تقارير الواردات (بحث حسب الشهر أو المادة)
+        </a>
     </div>
 </div>
 
@@ -575,6 +589,7 @@
         if(confirm('هل أنت متأكد من حذف هذه المادة؟')) {
             const form = document.createElement('form');
             form.method = 'POST';
+            form.form = 'POST';
             form.action = '/materials/delete/' + id;
             document.body.appendChild(form);
             form.submit();
