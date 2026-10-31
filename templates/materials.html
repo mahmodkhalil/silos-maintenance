@@ -12,10 +12,22 @@
     .tab-content { display: none; animation: fadeIn 0.3s; }
     .tab-content.active { display: block; }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    
+    .file-input-wrapper {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 15px;
+        background: #f8fafc;
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px dashed #cdd8e3;
+    }
 </style>
 
 <div class="page-title">المستودع الفرعي للمشروع</div>
 
+<!-- أزرار التبويبات -->
 <div class="tabs">
     <button class="tab-btn active" onclick="openTab('tab-balance', this)">📊 الرصيد الحالي</button>
     <button class="tab-btn" onclick="openTab('tab-receive', this)">📥 استلام (وارد)</button>
@@ -73,8 +85,19 @@
         </tbody>
     </table>
     {% else %}
-    <p style="text-align:center; color:#6b7c93; padding:20px;">لا يوجد مواد مسجلة في الدليل. أضف مادة جديدة.</p>
+    <p style="text-align:center; color:#6b7c93; padding:20px;">لا يوجد مواد مسجلة في الدليل. أضف مادة جديدة أو استوردها من إكسل.</p>
     {% endif %}
+    
+    <!-- نموذج استيراد المواد من إكسل -->
+    <div class="file-input-wrapper">
+        <form method="POST" action="{{ url_for('import_materials') }}" enctype="multipart/form-data" style="display:flex; gap:10px; align-items:center; width:100%;">
+            <div style="flex-grow:1;">
+                <label style="font-weight:bold; font-size:14px; display:block; margin-bottom:5px;">📥 استيراد مواد من ملف إكسل (سيتم البحث عن اسم المادة والوحدة تلقائياً)</label>
+                <input type="file" name="file" accept=".xlsx, .xls" required style="width:100%; padding:8px; border:1px solid #cdd8e3; border-radius:6px;">
+            </div>
+            <button type="submit" class="btn btn-primary" style="margin-top:22px;">رفع الملف</button>
+        </form>
+    </div>
 </div>
 
 <!-- 2. تبويب الاستلام (الوارد) -->
