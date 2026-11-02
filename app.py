@@ -9,10 +9,14 @@ import os
 app = Flask(__name__)
 app.secret_key = "silos_maintenance_secret_key_2026"
 
-# ============ إعداد قاعدة البيانات (PostgreSQL) ============
+# ============ إعداد قاعدة البيانات ============
 db_url = os.environ.get('DATABASE_URL', 'sqlite:///database.db')
+
+# هذا التعديل السحري يحل مشكلة psycopg2
 if db_url.startswith("postgres://"):
-    db_url = db_url.replace("postgres://", "postgresql://", 1)
+    db_url = db_url.replace("postgres://", "postgresql+psycopg://", 1)
+elif db_url.startswith("postgresql://"):
+    db_url = db_url.replace("postgresql://", "postgresql+psycopg://", 1)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -129,7 +133,6 @@ def row_to_dict(row):
 
 def rows_to_dicts(rows):
     return [row_to_dict(r) for r in rows]
-
 # ============ تسجيل الدخول ============
 def login_required(f):
     @wraps(f)
@@ -173,6 +176,7 @@ def index():
         total_works=total_works, done_works=done_works, active_works=active_works, 
         total_workers=total_workers, avg_progress=round(avg_progress, 1),
         project_settings=project_settings)
+
 # ============ إعدادات المشروع ============
 @app.route("/settings", methods=["GET", "POST"])
 @login_required
@@ -842,4 +846,5 @@ def export_reports():
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-    app.run(host='0.0.0.0', port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
